@@ -1,4 +1,4 @@
-# AI Log Analysis Thesis 2025
+# AI Log Analysis For Thesis 2025
 
 An advanced log analysis system leveraging artificial intelligence techniques for automated log parsing, anomaly detection, and intelligent monitoring.
 
