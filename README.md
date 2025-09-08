@@ -105,10 +105,9 @@ This project is part of academic research. Please respect intellectual property 
 
 ## Contact
 
-- **Author**: [Your Name]
-- **Institution**: [Your University]
-- **Email**: [Your Email]
-- **Supervisor**: [Supervisor Name]
+- **Author**: Nguyen Hoang Quan
+- **Email**: qaun10052003@gmail.com
+
 
 ---
 
