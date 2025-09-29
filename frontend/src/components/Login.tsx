@@ -22,9 +22,9 @@ const Login = () => {
   }, [isAuthenticated, navigate]);
 
   // Clear error when component mounts
-  useEffect(() => {
-    clearError();
-  }, [clearError]);
+  // useEffect(() => {
+  //   clearError();
+  // }, [clearError]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -33,17 +33,15 @@ const Login = () => {
       [name]: value
     }));
 
-    // Clear error when user starts typing
-    // if (error) {
-    //   clearError();
-    // }
+    //Clear error when user starts typing
+    if (error) {
+      clearError();
+    }
   };
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-   console.log("🛑 Form prevented, username=", formData.username, "password=", formData.password);
-
+    e.stopPropagation();
     // Add validation check
     if (!formData.username || !formData.password) {
       return;
@@ -52,19 +50,14 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      console.log('🔍 Before login attempt, error state:', error);
       const result = await login(formData.username, formData.password);
-      console.log('🔍 After login attempt, result:', result);
-      console.log('🔍 After login attempt, error state:', error);
-
       if (result?.success) {
         navigate('/dashboard');
-      } 
+      }
     } catch (err) {
-      // Ensure we don't reload the page
       setIsLoading(false);
-    }finally{
-    setIsLoading(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -119,7 +112,7 @@ const Login = () => {
           className="btn btn-primary"
           style={{ width: '100%' }}
           disabled={isLoading}
-          // onClick={() => console.log('🔍 Button clicked, form will submit')}
+        // onClick={() => console.log('🔍 Button clicked, form will submit')}
         >
           {isLoading ? 'Logging in...' : 'Login'}
         </button>

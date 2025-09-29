@@ -23,7 +23,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const skipRedirect = error.config?.skipAuthRedirect;
+
+    if (error.response?.status === 401 && !skipRedirect) {
       localStorage.removeItem('access_token');
       window.location.href = '/login';
     }
@@ -43,10 +45,11 @@ export const authAPI = {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
+      skipAuthRedirect: true
     });
     return {
-        status: response.status,
-        data: response.data
+      status: response.status,
+      tokenData: response.data
     }
   },
 

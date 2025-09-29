@@ -65,8 +65,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setError('');
       setLoading(true);
 
-      const {status, tokenData} = await authAPI.login(username, password);
-      console.log('🔍 AuthContext: authAPI.login returned:', tokenData);
+      const { status, tokenData } = await authAPI.login(username, password);
       localStorage.setItem('access_token', tokenData.access_token);
 
       // Get user info after successful login
@@ -77,9 +76,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         return { success: true };
       }
 
-      return { success: false, error: 'Unexpected status code: ' + status };
+      const errorMsg = 'Unexpected status code: ' + status;
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
 
     } catch (error) {
+
+      // console.log('🔴 AuthContext: Login error caught:', error); // Debug log
+
       let errorMessage = 'Login failed';
 
       if (error.response) {
@@ -93,7 +97,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       } else if (error.request) {
         errorMessage = 'Unable to connect to server. Please check your connection.';
       }
-
+      console.log('🔍 Setting error:', errorMessage); // Debug
       setError(errorMessage);
       return { success: false, error: errorMessage, status: error.response?.status };
     } finally {
