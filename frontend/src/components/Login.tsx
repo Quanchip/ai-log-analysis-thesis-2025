@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -26,7 +26,7 @@ const Login = () => {
     clearError();
   }, [clearError]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -34,23 +34,38 @@ const Login = () => {
     }));
 
     // Clear error when user starts typing
-    if (error) {
-      clearError();
-    }
+    // if (error) {
+    //   clearError();
+    // }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
-    clearError(); // Clear any previous errors
 
-    const result = await login(formData.username, formData.password);
+   console.log("🛑 Form prevented, username=", formData.username, "password=", formData.password);
 
-    if (result.success) {
-      navigate('/dashboard');
+    // Add validation check
+    if (!formData.username || !formData.password) {
+      return;
     }
 
+    setIsLoading(true);
+
+    try {
+      console.log('🔍 Before login attempt, error state:', error);
+      const result = await login(formData.username, formData.password);
+      console.log('🔍 After login attempt, result:', result);
+      console.log('🔍 After login attempt, error state:', error);
+
+      if (result?.success) {
+        navigate('/dashboard');
+      } 
+    } catch (err) {
+      // Ensure we don't reload the page
+      setIsLoading(false);
+    }finally{
     setIsLoading(false);
+    }
   };
 
   return (
@@ -104,6 +119,7 @@ const Login = () => {
           className="btn btn-primary"
           style={{ width: '100%' }}
           disabled={isLoading}
+          // onClick={() => console.log('🔍 Button clicked, form will submit')}
         >
           {isLoading ? 'Logging in...' : 'Login'}
         </button>
@@ -112,7 +128,7 @@ const Login = () => {
       <div className="form-footer">
         <p>
           Don't have an account?{' '}
-          <Link to="/register" className="nav-link">
+          <Link to="/register" className="nav-link ">
             Sign up here
           </Link>
         </p>

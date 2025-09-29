@@ -44,7 +44,10 @@ export const authAPI = {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
     });
-    return response.data;
+    return {
+        status: response.status,
+        data: response.data
+    }
   },
 
   // Register new user

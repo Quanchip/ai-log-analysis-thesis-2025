@@ -61,39 +61,41 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const login = async (username, password) => {
     try {
+      console.log('🔍 AuthContext: Starting login process');
       setError('');
       setLoading(true);
 
-      const tokenData = await authAPI.login(username, password);
+      const {status, tokenData} = await authAPI.login(username, password);
+      console.log('🔍 AuthContext: authAPI.login returned:', tokenData);
       localStorage.setItem('access_token', tokenData.access_token);
 
       // Get user info after successful login
-      await getCurrentUser();
+      if (status === 200) {
+        localStorage.setItem('access_token', tokenData.access_token);
+        await getCurrentUser();
+        console.log('🔍 AuthContext: Login successful');
+        return { success: true };
+      }
 
-      return { success: true };
+      return { success: false, error: 'Unexpected status code: ' + status };
+
     } catch (error) {
-      console.error('Login error:', error);
       let errorMessage = 'Login failed';
 
       if (error.response) {
-        // Handle different error response formats
-        if (error.response.data?.detail) {
-          errorMessage = error.response.data.detail;
-        } else if (error.response.data?.message) {
-          errorMessage = error.response.data.message;
-        } else if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data;
-        } else if (error.response.status === 401) {
+        if (error.response.status === 401) {
           errorMessage = 'Invalid username or password';
         } else if (error.response.status === 500) {
           errorMessage = 'Server error. Please try again later.';
+        } else if (error.response.data?.detail) {
+          errorMessage = error.response.data.detail;
         }
       } else if (error.request) {
         errorMessage = 'Unable to connect to server. Please check your connection.';
       }
 
       setError(errorMessage);
-      return { success: false, error: errorMessage };
+      return { success: false, error: errorMessage, status: error.response?.status };
     } finally {
       setLoading(false);
     }
@@ -132,7 +134,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         errorMessage = 'Unable to connect to server. Please check your connection.';
       }
 
+      console.log('🔍 AuthContext: Setting error message:', errorMessage);
       setError(errorMessage);
+      console.log('🔍 AuthContext: Error state after setError should be:', errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
