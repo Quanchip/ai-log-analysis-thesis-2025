@@ -5,13 +5,16 @@ interface User {
   id: string;
   username: string;
   email: string;
+  role: string;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   error: string;
-  login: (username: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (username: string, password: string) => Promise<{
+    success: boolean; error?: string
+  }>;
   register: (userData: any) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   clearError: () => void;
@@ -49,11 +52,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const getCurrentUser = async () => {
     try {
-      const userData = await authAPI.getCurrentUser();
+      const token = localStorage.getItem('access_token');
+      if (!token) return null;
+
+      const response = await authAPI.getCurrentUser();
+      const userData = response.User || response.data;
+
       setUser(userData);
+
+      localStorage.setItem('user_role', userData.role);
+
+      return userData
+
     } catch (error) {
       console.error('Failed to get current user:', error);
       localStorage.removeItem('access_token');
+      localStorage.removeItem('user_role');
+      setUser(null);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -61,7 +77,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const login = async (username, password) => {
     try {
-      console.log('🔍 AuthContext: Starting login process');
       setError('');
       setLoading(true);
 
@@ -71,9 +86,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // Get user info after successful login
       if (status === 200) {
         localStorage.setItem('access_token', tokenData.access_token);
-        await getCurrentUser();
+        const userData = await getCurrentUser();
         console.log('🔍 AuthContext: Login successful');
-        return { success: true };
+        return { success: true, user: userData };
       }
 
       const errorMsg = 'Unexpected status code: ' + status;

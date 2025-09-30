@@ -17,10 +17,8 @@
 
 **Subtasks:**
 - [ ] Create database migration script for user roles
-- [ ] Add role enum column to users table (`user`, `admin`, `super_admin`)
-- [ ] Add metadata columns (created_by, last_login, is_active, updated_at)
-- [ ] Create admin_audit_logs table schema
-- [ ] Create system_settings table schema
+- [ ] Add role enum column to users table (`user`, `admin`)
+- [ ] Add metadata columns (created_at)
 - [ ] Test migration on development database
 - [ ] Create rollback migration script
 
@@ -34,7 +32,6 @@
 ```
 backend/src/database.py
 backend/migrations/001_add_user_roles.py
-backend/migrations/002_create_admin_tables.py
 ```
 
 ---

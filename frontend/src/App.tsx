@@ -7,6 +7,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminDashboard from './admin/components/AdminDashboard';
 
 function App() {
   return (
@@ -25,7 +26,13 @@ function App() {
                   <Dashboard />
                 </ProtectedRoute>
               }
+
             />
+            <Route path="/admin/dashboard" element={
+              <ProtectedRoute>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
           </Routes>
         </div>
       </Router>

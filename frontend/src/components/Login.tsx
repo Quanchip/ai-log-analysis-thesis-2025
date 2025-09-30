@@ -9,17 +9,26 @@ const Login = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  const { login, error, clearError, isAuthenticated } = useAuth();
+  const { login, error, clearError, isAuthenticated, user } = useAuth();
 
   // Debug logging
   const navigate = useNavigate();
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
+    console.log('🔍 useEffect - isAuthenticated:', isAuthenticated);
+    console.log('🔍 useEffect - user:', user);
+
+    if (isAuthenticated && user) {
+      if (user.role === 'admin') {
+        console.log('🔍 useEffect redirecting to admin...');
+        navigate('/admin/dashboard', { replace: true });
+      } else {
+        console.log('🔍 useEffect redirecting to user...');
+        navigate('/dashboard', { replace: true });
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   // Clear error when component mounts
   // useEffect(() => {
@@ -52,7 +61,15 @@ const Login = () => {
     try {
       const result = await login(formData.username, formData.password);
       if (result?.success) {
-        navigate('/dashboard');
+        const currentUser = user;
+
+        if (currentUser?.role === 'admin') {
+          console.log('🔍 Redirecting to admin dashboard...');
+          navigate('/admin/dashboard', { replace: true });
+        } else {
+
+          navigate('/dashboard');
+        }
       }
     } catch (err) {
       setIsLoading(false);

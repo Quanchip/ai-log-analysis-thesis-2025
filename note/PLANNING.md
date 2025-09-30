@@ -92,44 +92,17 @@ frontend/src/
 
 **Users Table Extensions:**
 ```sql
-ALTER TABLE users ADD COLUMN role ENUM('user', 'admin', 'super_admin') DEFAULT 'user';
+ALTER TABLE users ADD COLUMN role ENUM('user', 'admin') DEFAULT 'user';
 ALTER TABLE users ADD COLUMN created_by INT REFERENCES users(id);
-ALTER TABLE users ADD COLUMN last_login TIMESTAMP;
-ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT true;
-ALTER TABLE users ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 ```
 
-**New Tables:**
-```sql
--- Admin audit trail
-CREATE TABLE admin_audit_logs (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    admin_user_id INT REFERENCES users(id),
-    action VARCHAR(100),
-    target_type VARCHAR(50),
-    target_id INT,
-    details JSON,
-    ip_address VARCHAR(45),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- System configuration
-CREATE TABLE system_settings (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    key VARCHAR(100) UNIQUE,
-    value TEXT,
-    description TEXT,
-    updated_by INT REFERENCES users(id),
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
 
 ---
 
 ## 🔐 Security Architecture
 
 ### Authentication & Authorization
-- **Multi-level Roles**: user → admin → super_admin
+- **Two-level Roles**: user → admin
 - **JWT Token Extension**: Include role in token payload
 - **Route Protection**: Both frontend and backend validation
 - **Session Management**: Admin sessions with shorter timeout
@@ -143,14 +116,14 @@ CREATE TABLE system_settings (
 
 ### Permission Matrix
 ```
-Feature               | User | Admin | Super Admin
----------------------|------|-------|-------------
-View Users           |  ❌  |  ✅   |     ✅
-Edit Users           |  ❌  |  ✅   |     ✅
-Delete Users         |  ❌  |  ❌   |     ✅
-System Settings      |  ❌  |  ❌   |     ✅
-Audit Logs           |  ❌  |  ✅   |     ✅
-Create Admin Users   |  ❌  |  ❌   |     ✅
+Feature               | User | Admin
+---------------------|------|-------
+View Users           |  ❌  |  ✅
+Edit Users           |  ❌  |  ✅
+Delete Users         |  ❌  |  ✅
+System Settings      |  ❌  |  ✅
+Audit Logs           |  ❌  |  ✅
+Create Admin Users   |  ❌  |  ✅
 ```
 
 ---
@@ -275,7 +248,7 @@ Create Admin Users   |  ❌  |  ❌   |     ✅
 
 ### Technical Risks
 **Risk**: Role-based auth complexity
-**Mitigation**: Start with simple 2-role system, extend gradually
+**Mitigation**: Simple 2-role system (user/admin) keeps complexity low
 
 **Risk**: Frontend bundle size increase
 **Mitigation**: Code splitting for admin routes

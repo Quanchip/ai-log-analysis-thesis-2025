@@ -88,8 +88,7 @@
   User Table Extensions
 
   users table additions:
-  - role: ENUM('user', 'admin', 'super_admin')
-   DEFAULT 'user'
+  - role: ENUM('user', 'admin') DEFAULT 'user'
   - created_by: INT (foreign key to users.id)
   - last_login: TIMESTAMP
   - is_active: BOOLEAN DEFAULT true
@@ -114,8 +113,7 @@
 
   Authentication & Authorization
 
-  - Multi-level role system (user → admin →
-  super_admin)
+  - Two-level role system (user → admin)
   - Session management with proper expiration
   - IP whitelisting for admin access
   (optional)
