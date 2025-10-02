@@ -16,9 +16,6 @@ const Login = () => {
 
   // Redirect if already authenticated
   useEffect(() => {
-    console.log('🔍 useEffect - isAuthenticated:', isAuthenticated);
-    console.log('🔍 useEffect - user:', user);
-
     if (isAuthenticated && user) {
       if (user.role === 'admin') {
         console.log('🔍 useEffect redirecting to admin...');
@@ -59,18 +56,8 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const result = await login(formData.username, formData.password);
-      if (result?.success) {
-        const currentUser = user;
-
-        if (currentUser?.role === 'admin') {
-          console.log('🔍 Redirecting to admin dashboard...');
-          navigate('/admin/dashboard', { replace: true });
-        } else {
-
-          navigate('/dashboard');
-        }
-      }
+      await login(formData.username, formData.password);
+      // Navigation will be handled by useEffect after user state updates
     } catch (err) {
       setIsLoading(false);
     } finally {

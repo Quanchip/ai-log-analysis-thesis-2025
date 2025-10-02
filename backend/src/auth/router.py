@@ -21,7 +21,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 # Get all users
 @router.get('/admin/users', status_code=status.HTTP_200_OK,
-             response_model=List[schemas.User], summary="Get all users")
+             response_model=List[schemas.UserResponse], summary="Get all users")
 
 def get_all_user(current_admin: AdminUser, db: Session = Depends(get_db)):
     user_service = UserService(db)
