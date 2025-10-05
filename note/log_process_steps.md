@@ -14,8 +14,6 @@ Hiển thị error message nếu file không hợp lệ
 Method: POST multipart/form-data
 Include: file binary data + metadata (filename, size)
 Optional: user authentication token
-Optional: additional metadata (log type, source system)
-
 
 Step 2: Server nhận request - Security Layer
 2.1. Authentication & Authorization

@@ -30,11 +30,46 @@ services:
       # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 30s
+      interval: 20s
       timeout: 10s
       retries: 3
     networks:
+      - thesis-network
+
+  backend:
+    build: ../backend
+    container_name: backend-thesis
+    # command: uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+    volumes:
+      - ../backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=myproject
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - SECRET_KEY=025ee95f1b360868c969aa2e8fcb280e
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - thesis-network
+
+  frontend:
+    build: ../frontend
+    container_name: myfrontend
+    # command: npm run dev -- --host 0.0.0.0
+    volumes:
+      - ../frontend:/app  # <--- mount code để hot reload frontend
+      - /app/node_modules  # tránh xung đột node_modules host
+    ports:
+      - "3000:3000"
+    depends_on:
       - backend
+    networks:
+      - thesis-network
 
 
 volumes:
@@ -42,6 +77,6 @@ volumes:
   postgres_data:
 
 networks:
-  backend:
+  thesis-network:
     driver: bridge
 

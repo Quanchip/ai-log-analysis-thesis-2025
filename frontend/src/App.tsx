@@ -8,6 +8,7 @@ import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './admin/components/AdminDashboard';
+import LogUpload from './components/LogUpload';
 
 
 function UserLayout() {
@@ -47,7 +48,16 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/upload"
+                element={
+                  <ProtectedRoute>
+                    <LogUpload />
+                  </ProtectedRoute>
+                }
+              />
             </Route>
+
             {/* Layout for admin */}
             <Route element={<AdminLayout />}>
                 <Route

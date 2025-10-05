@@ -1,7 +1,13 @@
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleStartAnalysis = () => {
+    navigate('/upload');
+  }
 
   return (
     <div className="dashboard">
@@ -19,7 +25,7 @@ const Dashboard = () => {
             <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
               Access advanced log analysis features and AI-powered insights.
             </p>
-            <button className="btn btn-primary">
+            <button className="btn btn-primary" onClick={handleStartAnalysis}>
               Start Analysis
             </button>
           </div>
