@@ -8,3 +8,5 @@ python-jose==3.5.0
 python-multipart==0.0.20
 psycopg2-binary==2.9.10
 python-dotenv==1.1.1
+minio>=7.2.0
+python-magic>=0.4.27

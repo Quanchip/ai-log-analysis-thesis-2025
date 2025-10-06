@@ -10,3 +10,14 @@ class LogFileResponse(BaseModel):
     upload_date: datetime
     user_id: int
     owner: UserResponse
+
+class LogFileResponseBasic(BaseModel):
+    filename: str
+    file_path: str
+    message: str
+
+class LogFileMinio(BaseModel):
+    bucket: str
+    object_name: str
+    url: str
+    message: str
