@@ -18,3 +18,5 @@ class Users(Base):
     # New simplified admin fields
     role = Column(Enum(UserRole), default=UserRole.user, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    
+    log_files = relationship("LogFile", back_populates="owner")

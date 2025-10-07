@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .auth import models as auth_models
 # import model from /logs
-
+from .logs import models as logs_model
 from .database import engine
 from .auth import router as auth_router
 from .logs import router as logs_router
@@ -23,3 +23,4 @@ app.include_router(auth_router.router)
 app.include_router(logs_router.router)
 
 auth_models.Base.metadata.create_all(engine)
+logs_model.Base.metadata.create_all(engine)

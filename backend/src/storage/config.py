@@ -6,7 +6,9 @@ class Settings(BaseSettings):
     MINIO_ACCESS_KEY: str = "admin"
     MINIO_SECRET_KEY: str = "admin123"
     MINIO_BUCKET_NAME: str = "raw-logs"
+    MINIO_PROCESSED_LOG_BUCKET: str = "processed-logs"
     MINIO_SECURE: bool = False
+
     
 settings = Settings()
 

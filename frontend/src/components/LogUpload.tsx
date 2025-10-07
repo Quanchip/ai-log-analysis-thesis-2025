@@ -7,7 +7,7 @@ const LogUpload = () => {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState<UploadStatus>("idle")
   const [errorMessage, setErrorMessage] = useState<string>("")
-
+  const [isDragging, setIsDragging] = useState(false);
 
   function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
     if (e.target.files) {
@@ -16,6 +16,28 @@ const LogUpload = () => {
       setErrorMessage("")
     }
   }
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile) {
+      setFile(droppedFile);
+      setStatus('idle');
+      setErrorMessage('');
+    }
+  };
 
   async function handleFileUpload() {
     if (!file) return;
@@ -48,6 +70,12 @@ const LogUpload = () => {
       console.log(error)
     }
   }
+
+  const removeFile = () => {
+    setFile(null);
+    setStatus('idle');
+    setErrorMessage('');
+  };
 
 
   return (

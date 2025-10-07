@@ -43,6 +43,29 @@ class MinIOClient:
                 "message": "File upload successfully"
             }
         except S3Error as e:
-            raise Exception(f"MinIO upload error: {e}")      
+            raise Exception(f"MinIO upload error: {e}")   
+
+    def get_file_raw(self, object_name: str):   
+        """Download file from MinIO"""
+        try:
+            response = self.client.get_object(
+                settings.MINIO_BUCKET_NAME,
+                object_name
+            )
+            return response.read()
+        except S3Error as e:
+            raise Exception(f"MinIO download error: {e}")
+        
+    def get_file_url(self, object_name: str, expires: int = 3600):
+        """Get presigned URL for file"""
+        try:
+            url = self.client.presigned_get_object(
+                settings.MINIO_BUCKET_NAME,
+                object_name,
+                expires=expires
+            )
+            return url
+        except S3Error as e:
+            raise Exception(f"MinIO presigned URL error: {e}")
 
 minio_client = MinIOClient()  
