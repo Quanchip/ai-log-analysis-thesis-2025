@@ -12,11 +12,11 @@ router = APIRouter(
     tags=['logs']
 )
 
-@router.post("/upload", response_model=schemas.LogFileMinio)
+@router.post("/upload")
 async def upload_log_file(current_user: CurrentUser,
                           file: UploadFile = File(...),
                           db: Session = Depends(get_db)):
-    allowed_extensions = [".log", ".csv", ".png"]
+    allowed_extensions = [".log", ".csv", ".png", ".txt"]
     file_extension = os.path.splitext(file.filename)[1].lower()
 
     if file_extension not in allowed_extensions:
@@ -24,7 +24,7 @@ async def upload_log_file(current_user: CurrentUser,
                             detail=f"File type not allowed.")
     
     try:
-        log_file_info = service.save_log_file(file, current_user["id"])
+        log_file_info = service.save_log_file(file, current_user["id"], db)
         return log_file_info
     
     except Exception as e:
