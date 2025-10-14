@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Union
 from pydantic import BaseModel
 
 from ..auth.schemas import UserResponse
@@ -9,7 +10,21 @@ class LogFileResponse(BaseModel):
     file_size: float
     upload_date: datetime
     user_id: int
-    owner: UserResponse
+    # owner: UserResponse
+    error: bool = False
+
+class UploadResponseSuccess(BaseModel):
+    file_id: int
+    bucket: str
+    object_name: str
+    message: str
+    user_id: int
+    error: bool = False
+
+class UploadResponseFail(BaseModel):
+    message: str
+    error: bool = True
+
 
 class LogFileResponseBasic(BaseModel):
     filename: str
@@ -21,3 +36,5 @@ class LogFileMinio(BaseModel):
     object_name: str
     url: str
     message: str
+
+UploadResponse = Union[UploadResponseSuccess, UploadResponseFail]

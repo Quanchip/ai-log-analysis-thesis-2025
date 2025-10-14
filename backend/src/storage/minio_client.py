@@ -44,6 +44,30 @@ class MinIOClient:
             }
         except S3Error as e:
             raise Exception(f"MinIO upload error: {e}")   
+        
+
+    def upload_process_file(self, file_data: bytes, object_name: str, content_type: str, bucket_name: str):
+        """Upload file to MinIO"""
+        try:
+            file_stream = io.BytesIO(file_data)
+            file_size = len(file_data)
+            
+            self.client.put_object(
+                bucket_name=bucket_name,
+                object_name=object_name,
+                data=file_stream,
+                length=file_size,
+                content_type=content_type
+            )
+            
+            return {
+                "bucket": bucket_name,
+                "object_name": object_name,
+                "url": f"{settings.MINIO_ENDPOINT}/{bucket_name}/{object_name}",
+                "message": "File upload successfully"
+            }
+        except S3Error as e:
+            raise Exception(f"MinIO upload error: {e}")   
 
     def get_file_raw(self, object_name: str):   
         """Download file from MinIO"""

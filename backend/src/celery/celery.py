@@ -70,7 +70,7 @@ def create_task(self, job_id: str):
 
         result_data = result_content.encode('utf-8')
 
-        minio_client.upload_file(
+        minio_client.upload_process_file(
             file_data=result_data,
             object_name=result_object_name,
             content_type="text/plain",

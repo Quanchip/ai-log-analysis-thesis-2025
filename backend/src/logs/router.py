@@ -12,7 +12,7 @@ router = APIRouter(
     tags=['logs']
 )
 
-@router.post("/upload")
+@router.post("/upload", response_model=schemas.UploadResponse)
 async def upload_log_file(current_user: CurrentUser,
                           file: UploadFile = File(...),
                           db: Session = Depends(get_db)):
@@ -23,12 +23,17 @@ async def upload_log_file(current_user: CurrentUser,
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=f"File type not allowed.")
     
-    try:
-        log_file_info = service.save_log_file(file, current_user["id"], db)
-        return log_file_info
+
+    result = service.save_log_file(file, current_user["id"], db)
+
+    if result["error"]:
+        return schemas.UploadResponseFail(message=result["message"], error=True)
     
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error uploading file: {str(e)}"
-        )
+    return schemas.UploadResponseSuccess(
+        file_id=result["file_id"],
+        bucket=result["bucket"],
+        object_name=result["object_name"],
+        message=result["message"],
+        user_id =result["user_id"],
+        error=False
+    )
