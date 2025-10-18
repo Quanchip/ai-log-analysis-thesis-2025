@@ -45,8 +45,8 @@ services:
       # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 20s
-      timeout: 10s
+      interval: 10s
+      timeout: 5s
       retries: 3
     networks:
       - thesis-network
@@ -79,12 +79,15 @@ services:
       - DB_USER=postgres
       - DB_PASSWORD=password
       - SECRET_KEY=025ee95f1b360868c969aa2e8fcb280e
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks: 
+    networks:
       - thesis-network
 
   celery-worker:
@@ -96,7 +99,7 @@ services:
     environment:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
-      # - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=${DATABASE_URL}
       - DB_HOST=postgres
       - DB_PORT=5432
       - DB_NAME=myproject
