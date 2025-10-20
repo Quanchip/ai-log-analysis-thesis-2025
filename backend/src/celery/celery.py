@@ -38,6 +38,8 @@ def create_task(self, job_id: str):
     start_time = time.time()
 
     try:
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
         job = db.query(ProcessingJob).filter(ProcessingJob.id == job_id).first()
         if not job:
             raise ValueError(f"ProcessingJob with id {job_id} not found")
@@ -66,7 +68,7 @@ def create_task(self, job_id: str):
         result_content = f"Total Lines: {total_lines}" 
 
         result_filename = f"result_{log_file.filename}.txt"
-        result_object_name = f"processed/{job.user_id}/{datetime.datetime.now().strftime('%Y%m%d')}/{job_id}_{result_filename}"
+        result_object_name = f"processed/{job.user_id}/{timestamp}_{job_id}_{result_filename}"
 
         result_data = result_content.encode('utf-8')
 
