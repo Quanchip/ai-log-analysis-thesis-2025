@@ -44,21 +44,7 @@ class DrainParserService:
 
     # Common log format templates
     LOG_FORMATS = {
-        "hdfs": "<Date> <Time> <Pid> <Level> <Component>: <Content>",
-        "hadoop": "<Date> <Time> <Level> \[<Process>\] <Component>: <Content>",
-        "spark": "<Date> <Time> <Level> <Component>: <Content>",
-        "linux": "<Month> <Date> <Time> <Level> <Component>(\[<PID>\])?: <Content>",
-        "apache": '<IP> - - \[<Time>\] "<Method> <Url> <Version>" <Status> <Size>',
-        "apache_error": "\[<Time>\] \[<Level>\] <Content>",
-        "bgl": "<Label> <Timestamp> <Date> <Node> <Time> <NodeRepeat> <Type> <Component> <Level> <Content>",
-        "thunderbird": "<Label> <Timestamp> <Date> <User> <Month> <Day> <Time> <Location> <Component>(\[<PID>\])?: <Content>",
-        "windows": "<Date> <Time>, <Level> <Component> <Content>",
-        "healthapp": "<Time>\|<Component>\|<Pid>\|<Content>",
-        "mac": "<Month> <Date> <Time> <User> <Component>\[<PID>\]( \(<Address>\))?: <Content>",
-        "openstack": "<Logrecord> <Date> <Time> <Pid> <Level> <Component> \[<ADDR>\] <Content>",
-        "proxifier": "\[<Time>\] <Program> - <Content>",
-        "zookeeper": "<Date> <Time> - <Level>  \[<Node>:<Component>@<Id>\] - <Content>",
-        "generic": "<Content>",  # Fallback: treat entire line as content
+        "hdfs": "<Date> <Time> <Pid> <Level> <Component>: <Content>"
     }
 
     # Common preprocessing regex patterns
@@ -66,14 +52,6 @@ class DrainParserService:
         "hdfs": [
             r'blk_(|-)[0-9]+',  # block id
             r'(/|)([0-9]+\.){3}[0-9]+(:[0-9]+|)(:|)',  # IP
-            r'(?<=[^A-Za-z0-9])(\-?\+?\d+)(?=[^A-Za-z0-9])|[0-9]+$',  # Numbers
-        ],
-        "hadoop": [
-            r'(\d+\.){3}\d+',  # IP
-            r'\d{4}-\d{2}-\d{2}',  # Date
-            r'\d{2}:\d{2}:\d{2}',  # Time
-        ],
-        "generic": [
             r'(?<=[^A-Za-z0-9])(\-?\+?\d+)(?=[^A-Za-z0-9])|[0-9]+$',  # Numbers
         ]
     }
