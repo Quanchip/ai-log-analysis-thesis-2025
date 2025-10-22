@@ -59,7 +59,7 @@ class DrainParserService:
     def __init__(
         self,
         log_format: str = None,
-        log_format_name: str = "generic",
+        log_format_name: str = "hdfs",
         st: float = 0.5,
         depth: int = 4,
         max_child: int = 100,
@@ -81,7 +81,7 @@ class DrainParserService:
         """
         # Determine log format
         if log_format is None:
-            self.log_format = self.LOG_FORMATS.get(log_format_name, self.LOG_FORMATS["generic"])
+            self.log_format = self.LOG_FORMATS.get(log_format_name, self.LOG_FORMATS["hdfs"])
             self.log_format_name = log_format_name
         else:
             self.log_format = log_format
@@ -89,7 +89,7 @@ class DrainParserService:
 
         # Set regex patterns
         if rex is None:
-            self.rex = self.DEFAULT_REGEX_PATTERNS.get(self.log_format_name, self.DEFAULT_REGEX_PATTERNS["generic"])
+            self.rex = self.DEFAULT_REGEX_PATTERNS.get(self.log_format_name, self.DEFAULT_REGEX_PATTERNS["hdfs"])
         else:
             self.rex = rex
 
@@ -297,7 +297,7 @@ class DrainParserService:
 def parse_log_content(
     log_content: str,
     log_format: str = None,
-    log_format_name: str = "generic",
+    log_format_name: str = "hdfs",
     **kwargs
 ) -> Dict[str, Any]:
     """
