@@ -27,9 +27,11 @@ class UploadResponseFail(BaseModel):
 
 
 class LogFileResponseBasic(BaseModel):
+    id: int
     filename: str
-    file_path: str
-    message: str
+    file_size: float
+    upload_date: datetime
+    user_id: int
 
 class LogFileMinio(BaseModel):
     bucket: str
