@@ -135,7 +135,7 @@ const LogUpload = () => {
           style={{ display: 'none' }}
         />
         <p style={{ margin: '12px 0 0 0', fontSize: '12px', color: '#9ca3af' }}>
-          Supported formats: .log, .csv, .txt, .png
+          Supported formats: .log
         </p>
       </div>
 
