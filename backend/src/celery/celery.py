@@ -112,6 +112,8 @@ def create_task(self, job_id: str):
         job.status = JobStatus.COMPLETED
 
         db.commit()
+
+        
     
     except Exception as e:
         print(f"[Task {self.request.id}] ❌ Error: {str(e)}")
