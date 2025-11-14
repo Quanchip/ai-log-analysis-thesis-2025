@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum, DateTime
-from sqlalchemy.sql import func
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum
 from src.database import Base
 from sqlalchemy.orm import relationship
 import enum
@@ -24,8 +23,8 @@ class ProcessingJob(Base):
     result_file_path = Column(String(500), nullable=True) 
 
     # Relationships
-    user = relationship("Users")
-    log_file = relationship("LogFile")
+    user = relationship("Users", backref="processing_jobs")
+    log_file = relationship("LogFile", backref="processing_jobs")
 
     # Relationship
     

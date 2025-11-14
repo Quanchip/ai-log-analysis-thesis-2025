@@ -1,11 +1,18 @@
 import datetime
 import os
-import time 
+import tempfile
+import time
+
+from fastapi import logger 
 from celery import Celery, Task
 from dotenv import load_dotenv
+
+from ..ml.models import AnalysisResult
+from ..ml.service import get_ml_service
 from ..database import SessionLocal
-from ..jobs.models import JobStatus, ProcessingJob
+from ..auth.models import Users  # Import first to register in SQLAlchemy registry
 from ..logs.models import LogFile
+from ..jobs.models import JobStatus, ProcessingJob
 from ..storage.minio_client import minio_client
 from ..parser.parser_service import parse_log_content
 import pandas as pd
@@ -39,6 +46,7 @@ def create_task(self, job_id: str):
 
     db = self.db
     start_time = time.time()
+    job = None  # Initialize to None for exception handler
 
     try:
         # timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -54,10 +62,14 @@ def create_task(self, job_id: str):
         if not log_file:
             raise ValueError(f"LogFile with id {job.file_id} not found")
         
+        print("===JOB BEFORE UPDATE===", job.status)
+
         job.status = JobStatus.PROCESSING
         job.celery_task_id = self.request.id
         # job.processing_started_at = datetime.utcnow()
         db.commit()
+
+        print("===JOB BEFORE UPDATE===", job.status)
 
         print(f"[Task {self.request.id}] Processing job {job_id}")
         print(f"[Task {self.request.id}] File: {log_file.filename}")
@@ -108,13 +120,127 @@ def create_task(self, job_id: str):
             bucket_name="processed-logs"  # Different bucket
         )
 
-        job.result_file_path = base_path
-        job.status = JobStatus.COMPLETED
+        # Save the full path to the structured CSV
+        job.result_file_path = f"{base_path}_structured.csv"
+        # Don't mark as COMPLETED yet - ML analysis still pending
+        # job.status = JobStatus.COMPLETED
 
         db.commit()
 
-        
-    
+        print(f"[Task {self.request.id}] ✓ Parsing completed, queueing ML analysis...")
+
+        try:
+            ml_task = ml_analysis_task.delay(job_id)
+            print(f"[Task {self.request.id}] ✓ ML task queued with ID: {ml_task.id}")
+        except Exception as ml_error:
+            print(f"[Task {self.request.id}] ❌ Failed to queue ML task: {str(ml_error)}")
+            import traceback
+            traceback.print_exc()
+
     except Exception as e:
         print(f"[Task {self.request.id}] ❌ Error: {str(e)}")
-        # job = db.query(ProcessingJob).filter(ProcessingJob.id == job_id).first()
+
+        # Update job status to FAILED
+        if job:
+            job.status = JobStatus.FAILED
+            db.commit()
+
+        raise  # Re-raise to let Celery handle retry logic
+
+
+@celery.task(bind=True, base=DatabaseTask, name="ml_analysis_task")
+def ml_analysis_task(self, job_id: str):
+    """
+    Celery task to run ML anomaly detection on parsed CSV.
+
+    This runs AFTER parse_log_task completes.
+
+    Args:
+        job_id: The ProcessingJob UUID
+
+    Flow:
+        1. Query job and get CSV location
+        2. Download CSV from MinIO
+        3. Run ML prediction
+        4. Save results to database
+        5. Update job status
+    """
+              
+    db = self.db
+
+    try:
+        print(f"[ML Task] Starting ML analysis for job {job_id}")
+
+        job = db.query(ProcessingJob).filter(ProcessingJob.id == job_id).first()
+        if not job:
+            raise ValueError(f"Job {job_id} not found")
+        if not job.result_file_path:
+            raise ValueError(f"Job {job_id} has no CSV file (parsing may have failed)")
+
+        print(f"[ML Task] Downloading CSV from MinIO: {job.result_file_path}")
+
+        csv_data = minio_client.get_object(
+            bucket_name="processed-logs",
+            object_name=job.result_file_path
+        )
+
+        temp_csv = tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.csv')
+
+        try:
+            for chunk in csv_data.stream(32*1024):
+                temp_csv.write(chunk)
+            temp_csv.close()
+
+            print(f"[ML Task] CSV downloaded to {temp_csv.name}")
+
+            # Step 3: Run ML prediction
+            print(f"[ML Task] Loading ML service and running prediction...")
+            ml_service = get_ml_service()
+            result = ml_service.predict_from_csv(temp_csv.name)
+
+            print(f"[ML Task] ✓ ML prediction completed: {result['anomaly_count']} anomalies found")
+
+            analysis_result = AnalysisResult(
+                log_file_id=job.file_id,
+                total_logs=result["total_logs"],
+                anomaly_count=result["anomaly_count"],
+                normal_count=result["normal_count"],
+                anomaly_percentage=result["anomaly_percentage"],
+                predictions=result["predictions"]
+            )
+
+            db.add(analysis_result)
+            db.commit()
+            db.refresh(analysis_result)
+
+            print(f"[ML Task] ✓ Analysis result saved with ID {analysis_result.id}")
+
+            job.status = JobStatus.COMPLETED
+            db.commit()
+
+            print(f"[ML Task] ✓ Job {job_id} marked as COMPLETED")
+
+            return {
+                "job_id": job_id,
+                "analysis_id": analysis_result.id,
+                "anomaly_count": result["anomaly_count"],
+                "status": "success"
+            }
+            
+        finally:
+            # Cleanup: Delete temporary file
+            if os.path.exists(temp_csv.name):
+                os.unlink(temp_csv.name)
+                # logger.info(f"Cleaned up temp file {temp_csv.name}")        
+
+    except Exception as e:
+        print(f"[ML Task] ❌ ML analysis failed for job {job_id}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+        # Update job with error
+        if job:
+            job.status = JobStatus.FAILED
+            db.commit()
+
+        raise

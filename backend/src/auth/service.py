@@ -49,7 +49,7 @@ class UserService:
         user = self.authenticate_user(form_data.username, form_data.password)
         if not user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Validation failed')
-        token = self.create_access_token(user.username, user.id, user.role.value, timedelta(minutes=30))
+        token = self.create_access_token(user.username, user.id, user.role.value, timedelta(minutes=120))
 
         return {'access_token': token, 'token_type': 'bearer'}
     

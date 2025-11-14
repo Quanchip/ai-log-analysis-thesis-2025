@@ -52,8 +52,14 @@ User → Upload Log → Parse to CSV → ML Analysis → Show Results ✓
 - 🆕 You'll learn: Loading ML models, making predictions
 
 ### Required Files
-- **ML Model File**: `decision_tree_model_all.pkl` (you have this)
+- **ML Model File**: `decision_tree_model_production.pkl` (you have this)
+- **Feature Extractor File**: `feature_extractor_production.pkl` (CRITICAL - transforms logs to model features)
 - **Location**: Currently at `/home/gqy9hc/Document/log_process/loglizer/data/HDFS/`
+
+**Why Two Files?**
+- **Model**: Makes the actual predictions (anomaly or normal)
+- **Feature Extractor**: Converts raw log event sequences into numeric features the model understands
+- Think of it like: Feature Extractor = Translator, Model = Decision Maker
 
 ### Required Python Packages
 
@@ -84,22 +90,39 @@ pip install scikit-learn==1.5.0 joblib==1.4.2
 ### How ML Anomaly Detection Works
 
 **Simple Explanation:**
-1. Your Drain parser converts raw logs → structured CSV
-2. ML model looks at each row in CSV
-3. Model predicts: "Is this log normal (0) or anomaly (1)?"
+1. Your Drain parser converts raw logs → structured CSV with event sequences
+2. Feature extractor converts event sequences → numeric feature vectors
+3. ML model looks at feature vectors and predicts: "normal (0) or anomaly (1)?"
 4. We count results and show statistics
 
-**Example:**
+**Detailed Example:**
 ```
-CSV Input (100 log entries):
-Row 1: [features...] → ML predicts: 0 (normal)
-Row 2: [features...] → ML predicts: 1 (anomaly!)
-Row 3: [features...] → ML predicts: 0 (normal)
-...
-Row 100: [features...] → ML predicts: 0 (normal)
+Step 1: Drain Parser Output (CSV)
+BlockId | EventSequence
+blk_1   | E1 E5 E22 E11  ← Raw event sequence
+blk_2   | E1 E5 E33      ← Different pattern (maybe anomaly?)
+blk_3   | E1 E5 E22 E11  ← Same as blk_1 (likely normal)
 
-Result: 95 normal, 5 anomalies (5% anomaly rate)
+Step 2: Feature Extractor Transforms Events → Numbers
+blk_1: E1 E5 E22 E11 → [1, 0, 1, 1, 0, 1, ...]  ← Feature vector (200 dimensions)
+blk_2: E1 E5 E33     → [1, 0, 0, 1, 1, 0, ...]  ← Different pattern detected!
+blk_3: E1 E5 E22 E11 → [1, 0, 1, 1, 0, 1, ...]  ← Same vector as blk_1
+
+Step 3: ML Model Makes Predictions
+blk_1: [1,0,1,1,0,1,...] → Prediction: 0 (normal)
+blk_2: [1,0,0,1,1,0,...] → Prediction: 1 (ANOMALY!)
+blk_3: [1,0,1,1,0,1,...] → Prediction: 0 (normal)
+
+Step 4: Calculate Statistics
+Total: 3 sessions
+Normal: 2 (66.7%)
+Anomalies: 1 (33.3%)
 ```
+
+**Why Two Files?**
+- **Feature Extractor**: Learned vocabulary during training (E1, E2, E3... = known events)
+- **Model**: Learned normal vs anomaly patterns using those features
+- They MUST be used together - trained as a pair!
 
 ### Where Does This Fit in Your Code?
 
@@ -150,26 +173,44 @@ touch ml/router.py
 ```
 backend/src/
 ├── ml/
-│   ├── __init__.py          # Empty file (makes it a Python package)
-│   ├── models/              # Folder for ML model files
-│   │   └── __init__.py      # Empty file
-│   ├── service.py           # We'll write the ML logic here
-│   ├── schemas.py           # Pydantic models for API
-│   ├── models.py            # Database models
-│   └── router.py            # API endpoints
+│   ├── __init__.py           # Empty file (makes it a Python package)
+│   ├── trained_models/       # Folder for .pkl files (RENAMED from models/)
+│   │   ├── __init__.py       # Empty file
+│   │   ├── decision_tree_model_production.pkl      # (copy later)
+│   │   └── feature_extractor_production.pkl        # (copy later)
+│   ├── service.py            # We'll write the ML logic here
+│   ├── schemas.py            # Pydantic models for API
+│   ├── models.py             # Database models (NOT a directory!)
+│   └── router.py             # API endpoints
 ```
 
-#### Step 1.2: Copy ML Model File
+#### Step 1.2: Copy ML Model Files (BOTH Required!)
 
 ```bash
-# Copy your trained model to the project
-cp /home/gqy9hc/Document/log_process/loglizer/data/HDFS/decision_tree_model_all.pkl \
-   backend/src/ml/models/decision_tree_model_all.pkl
+# IMPORTANT: Rename the models directory to avoid conflicts
+# You have a models/ directory AND models.py file - Python gets confused!
+cd backend/src/ml
+mv models trained_models  # Rename to avoid conflict
 
-# Verify it's there
-ls -lh backend/src/ml/models/
-# Should show: decision_tree_model_all.pkl (with file size)
+# Now copy BOTH files (model + feature extractor)
+cp /home/gqy9hc/Document/log_process/loglizer/data/HDFS/decision_tree_model_production.pkl \
+   backend/src/ml/trained_models/
+
+cp /home/gqy9hc/Document/log_process/loglizer/data/HDFS/feature_extractor_production.pkl \
+   backend/src/ml/trained_models/
+
+# Verify both files are there
+ls -lh backend/src/ml/trained_models/
+# Should show:
+#   decision_tree_model_production.pkl
+#   feature_extractor_production.pkl
 ```
+
+**Why rename models/ to trained_models/?**
+- You have `ml/models.py` (database models)
+- AND `ml/models/` (directory for .pkl files)
+- Python imports `ml.models` and gets confused which one to use!
+- Solution: Rename directory to `trained_models/`
 
 ---
 
@@ -284,13 +325,21 @@ Create `backend/src/ml/service.py`:
 """
 ML Service for anomaly detection.
 This is the core logic for loading the model and making predictions.
+
+Based on DecisionTree_model_production.py pattern.
 """
+import sys
 import pickle
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import logging
+
+# Add loglizer to path (adjust based on where you copied it)
+# You'll need to copy the loglizer library to your backend
+sys.path.append(str(Path(__file__).parent.parent.parent / 'third_party'))
+from loglizer import dataloader
 
 logger = logging.getLogger(__name__)
 
@@ -299,6 +348,10 @@ class MLService:
     """
     Service for ML-based anomaly detection on log files.
 
+    Requires TWO files:
+    1. Model file (.pkl) - makes predictions
+    2. Feature extractor (.pkl) - transforms data to features
+
     Simple usage:
         ml_service = MLService()
         result = ml_service.predict_from_csv("/path/to/parsed.csv")
@@ -306,27 +359,43 @@ class MLService:
     """
 
     def __init__(self):
-        """Load the trained ML model when service is created."""
-        # Find the model file (relative to this file)
-        model_path = Path(__file__).parent / "models" / "decision_tree_model_all.pkl"
+        """Load the trained ML model and feature extractor."""
+        # Path to trained_models directory
+        models_dir = Path(__file__).parent / "trained_models"
 
+        model_path = models_dir / "decision_tree_model_production.pkl"
+        feature_extractor_path = models_dir / "feature_extractor_production.pkl"
+
+        # Check if both files exist
         if not model_path.exists():
             raise FileNotFoundError(f"ML model not found at {model_path}")
+        if not feature_extractor_path.exists():
+            raise FileNotFoundError(f"Feature extractor not found at {feature_extractor_path}")
 
-        # Load the pickled model
+        # Load the model
         logger.info(f"Loading ML model from {model_path}")
         with open(model_path, 'rb') as f:
             self.model = pickle.load(f)
 
-        logger.info("ML model loaded successfully")
+        # Load the feature extractor
+        logger.info(f"Loading feature extractor from {feature_extractor_path}")
+        with open(feature_extractor_path, 'rb') as f:
+            self.feature_extractor = pickle.load(f)
+
+        logger.info(f"ML model loaded successfully")
+        logger.info(f"Feature extractor loaded - vocabulary size: {len(self.feature_extractor.events)}")
+        logger.info(f"OOV support: {'ENABLED' if self.feature_extractor.oov else 'DISABLED'}")
 
 
     def predict_from_csv(self, csv_path: str) -> Dict:
         """
         Main method: Load CSV and predict anomalies.
 
+        Follows DecisionTree_model_production.py pattern exactly.
+
         Args:
-            csv_path: Path to the parsed CSV file (from Drain parser)
+            csv_path: Path to the parsed CSV file from Drain parser
+                     (e.g., "filename_structured.csv")
 
         Returns:
             Dictionary with statistics:
@@ -339,82 +408,71 @@ class MLService:
             }
         """
         try:
-            logger.info(f"Starting prediction for {csv_path}")
+            logger.info("="*60)
+            logger.info("DETECTING ANOMALIES IN NEW USER LOGS")
+            logger.info("="*60)
 
-            # Step 1: Load and preprocess CSV
-            df = self._load_and_preprocess_csv(csv_path)
+            # Step 1: Load data using loglizer's dataloader (same as production script)
+            logger.info('\n[1] Loading log data...')
+            (_, _), (x_data, _), data_df = dataloader.load_HDFS(
+                csv_path,
+                label_file=None,  # No labels for prediction
+                window='session',
+                train_ratio=0,    # Use all data for prediction
+                split_type='sequential'
+            )
 
-            # Step 2: Extract features for model
-            X = self._extract_features(df)
+            logger.info(f"  ✓ Total sessions: {len(x_data)}")
 
-            # Step 3: Make predictions
-            predictions = self.model.predict(X)
+            # Step 2: Analyze events (check for OOV)
+            logger.info('\n[2] Event analysis...')
+            new_events = set()
+            for session in x_data:
+                new_events.update(session)
 
-            # Step 4: Calculate statistics
+            known_events = set(self.feature_extractor.events)
+            overlap = new_events.intersection(known_events)
+            unseen = new_events - known_events
+
+            logger.info(f"  Total unique events in new data: {len(new_events)}")
+            logger.info(f"  Known events (in training): {len(overlap)} ({len(overlap)/len(new_events)*100:.1f}%)")
+            logger.info(f"  Unknown events (OOV): {len(unseen)} ({len(unseen)/len(new_events)*100:.1f}%)")
+
+            if unseen:
+                logger.warning(f"  Unseen EventIds: {sorted(unseen)}")
+                if not self.feature_extractor.oov:
+                    logger.warning("  ⚠ WARNING: Model was NOT trained with OOV support!")
+                    logger.warning("  ⚠ Unknown events will be treated as zero vectors")
+
+            # Step 3: Transform features
+            logger.info('\n[3] Transforming features...')
+            x_transformed = self.feature_extractor.transform(x_data)
+            logger.info(f"  ✓ Transformed shape: {x_transformed.shape}")
+
+            # Check for zero vectors
+            zero_rows = (x_transformed.sum(axis=1) == 0).sum()
+            if zero_rows > 0:
+                logger.warning(f"  ⚠ Warning: {zero_rows} sessions have zero features (likely all unknown events)")
+
+            # Step 4: Predict anomalies
+            logger.info('\n[4] Detecting anomalies...')
+            predictions = self.model.predict(x_transformed)
+
+            # Step 5: Calculate statistics
             result = self._calculate_statistics(predictions)
 
-            logger.info(f"Prediction completed: {result['anomaly_count']}/{result['total_logs']} anomalies")
+            logger.info('='*60)
+            logger.info('RESULTS:')
+            logger.info(f'  Total sessions: {result["total_logs"]}')
+            logger.info(f'  Normal sessions: {result["normal_count"]} ({(result["normal_count"]/result["total_logs"]*100):.2f}%)')
+            logger.info(f'  Anomalies detected: {result["anomaly_count"]} ({result["anomaly_percentage"]:.2f}%)')
+            logger.info('='*60)
+
             return result
 
         except Exception as e:
             logger.error(f"Prediction failed: {str(e)}", exc_info=True)
             raise
-
-
-    def _load_and_preprocess_csv(self, csv_path: str) -> pd.DataFrame:
-        """
-        Load CSV file and do basic preprocessing.
-
-        IMPORTANT: Adjust this method based on your CSV format!
-        """
-        logger.info(f"Loading CSV from {csv_path}")
-
-        # Load CSV
-        df = pd.read_csv(csv_path)
-
-        logger.info(f"Loaded {len(df)} rows with columns: {df.columns.tolist()}")
-
-        # Basic cleaning
-        df = df.fillna(0)  # Replace NaN with 0
-
-        # TODO: Add more preprocessing if needed:
-        # - Remove unnecessary columns
-        # - Normalize values
-        # - Convert data types
-        # - Handle missing values
-
-        return df
-
-
-    def _extract_features(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Extract features that the model expects.
-
-        IMPORTANT: This depends on how your model was trained!
-
-        Common scenarios:
-        1. Model trained on event counts: Use EventTemplate columns
-        2. Model trained on raw features: Use all numeric columns
-        3. Model trained with specific columns: Select only those
-        """
-        # Option 1: If your CSV has a 'Label' column, drop it
-        # (Label is the target variable, not a feature)
-        if 'Label' in df.columns:
-            X = df.drop(['Label'], axis=1)
-        else:
-            X = df
-
-        # Option 2: If you have non-numeric columns, drop them
-        # (Most ML models need numeric input only)
-        X = X.select_dtypes(include=[np.number])
-
-        # Option 3: If you know specific columns your model needs
-        # Uncomment and adjust this:
-        # required_columns = ['EventTemplate', 'EventId', ...]
-        # X = df[required_columns]
-
-        logger.info(f"Extracted features shape: {X.shape}")
-        return X
 
 
     def _calculate_statistics(self, predictions: np.ndarray) -> Dict:
@@ -1281,16 +1339,18 @@ suggestions = llm_service.generate_suggestions(
 ```
 backend/src/
 ├── ml/
-│   ├── models/decision_tree_model_all.pkl  ← Copied
-│   ├── service.py                          ← Created
-│   ├── models.py                           ← Created
-│   ├── schemas.py                          ← Created
-│   └── router.py                           ← Created
-├── celery/celery.py                        ← Modified (added ml_analysis_task)
-└── main.py                                 ← Modified (registered ML router)
+│   ├── trained_models/
+│   │   ├── decision_tree_model_production.pkl   ← Copied
+│   │   └── feature_extractor_production.pkl     ← Copied
+│   ├── service.py                               ← Created
+│   ├── models.py                                ← Created
+│   ├── schemas.py                               ← Created
+│   └── router.py                                ← Created
+├── celery/celery.py                             ← Modified (added ml_analysis_task)
+└── main.py                                      ← Modified (registered ML router)
 
 frontend/src/
-└── components/AnalysisResults.tsx          ← Created
+└── components/AnalysisResults.tsx               ← Created
 ```
 
 ### Architecture Flow

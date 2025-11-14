@@ -31,13 +31,17 @@ async def upload_log_file(current_user: CurrentUser,
 
     if result["error"]:
         return schemas.UploadResponseFail(message=result["message"], error=True)
-    
+
+    # Extract job_id from job_data
+    job_id = result.get("job_data", {}).get("job_id")
+
     return schemas.UploadResponseSuccess(
         file_id=result["file_id"],
         bucket=result["bucket"],
         object_name=result["object_name"],
         message=result["message"],
-        user_id =result["user_id"],
+        user_id=result["user_id"],
+        job_id=job_id,  # Add job_id to response
         error=False
     )
 

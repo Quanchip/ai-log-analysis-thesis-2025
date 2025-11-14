@@ -3,6 +3,7 @@
     "python-envs.pythonProjects": [],
     "python.analysis.extraPaths": [
         "./backend/src",
-        "./backend/src/third_party/logparser"
+        "./backend/src/third_party/logparser",
+        "./backend/src/third_party/loglizer"
     ]
 }

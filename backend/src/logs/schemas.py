@@ -19,6 +19,7 @@ class UploadResponseSuccess(BaseModel):
     object_name: str
     message: str
     user_id: int
+    job_id: str  # UUID of the processing job
     error: bool = False
 
 class UploadResponseFail(BaseModel):

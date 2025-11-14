@@ -9,6 +9,7 @@ import Dashboard from './components/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './admin/components/AdminDashboard';
 import LogUpload from './components/LogUpload';
+import Results from './components/Results';
 
 
 function UserLayout() {
@@ -53,6 +54,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <LogUpload />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/results/:jobId"
+                element={
+                  <ProtectedRoute>
+                    <Results />
                   </ProtectedRoute>
                 }
               />

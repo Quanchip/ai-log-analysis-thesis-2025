@@ -5,7 +5,7 @@ This stores the predictions from our ML model.
 from sqlalchemy import Column, Integer, String, Float, DateTime, JSON, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
-from ..auth.models import Base
+from src.database import Base
 
 
 class AnalysisResult(Base):

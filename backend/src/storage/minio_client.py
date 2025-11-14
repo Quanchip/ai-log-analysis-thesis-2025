@@ -69,8 +69,8 @@ class MinIOClient:
         except S3Error as e:
             raise Exception(f"MinIO upload error: {e}")   
 
-    def get_file_raw(self, object_name: str):   
-        """Download file from MinIO"""
+    def get_file_raw(self, object_name: str):
+        """Download file from MinIO (default bucket)"""
         try:
             response = self.client.get_object(
                 settings.MINIO_BUCKET_NAME,
@@ -79,7 +79,28 @@ class MinIOClient:
             return response.read()
         except S3Error as e:
             raise Exception(f"MinIO download error: {e}")
-        
+
+    def get_object(self, bucket_name: str, object_name: str):
+        """
+        Download object from MinIO (any bucket).
+        Returns a response object with .stream() method for chunked reading.
+
+        Args:
+            bucket_name: Name of the bucket
+            object_name: Path to the object
+
+        Returns:
+            MinIO response object with .stream() method
+        """
+        try:
+            response = self.client.get_object(
+                bucket_name,
+                object_name
+            )
+            return response
+        except S3Error as e:
+            raise Exception(f"MinIO download error from {bucket_name}/{object_name}: {e}")
+
     def get_file_url(self, object_name: str, expires: int = 3600):
         """Get presigned URL for file"""
         try:
@@ -91,5 +112,7 @@ class MinIOClient:
             return url
         except S3Error as e:
             raise Exception(f"MinIO presigned URL error: {e}")
+        
+    
 
 minio_client = MinIOClient()  
