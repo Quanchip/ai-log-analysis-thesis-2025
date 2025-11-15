@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,48 +9,60 @@ const Login = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  const { login, error, clearError, isAuthenticated } = useAuth();
+  const { login, error, clearError, isAuthenticated, user } = useAuth();
 
   // Debug logging
   const navigate = useNavigate();
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
+    if (isAuthenticated && user) {
+      if (user.role === 'admin') {
+        console.log('🔍 useEffect redirecting to admin...');
+        navigate('/admin/dashboard', { replace: true });
+      } else {
+        console.log('🔍 useEffect redirecting to user...');
+        navigate('/dashboard', { replace: true });
+      }
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   // Clear error when component mounts
-  useEffect(() => {
-    clearError();
-  }, [clearError]);
+  // useEffect(() => {
+  //   clearError();
+  // }, [clearError]);
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
 
-    // Clear error when user starts typing
+    //Clear error when user starts typing
     if (error) {
       clearError();
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsLoading(true);
-    clearError(); // Clear any previous errors
-
-    const result = await login(formData.username, formData.password);
-
-    if (result.success) {
-      navigate('/dashboard');
+    e.stopPropagation();
+    // Add validation check
+    if (!formData.username || !formData.password) {
+      return;
     }
 
-    setIsLoading(false);
+    setIsLoading(true);
+
+    try {
+      await login(formData.username, formData.password);
+      // Navigation will be handled by useEffect after user state updates
+    } catch (err) {
+      setIsLoading(false);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -104,6 +116,7 @@ const Login = () => {
           className="btn btn-primary"
           style={{ width: '100%' }}
           disabled={isLoading}
+        // onClick={() => console.log('🔍 Button clicked, form will submit')}
         >
           {isLoading ? 'Logging in...' : 'Login'}
         </button>
@@ -112,7 +125,7 @@ const Login = () => {
       <div className="form-footer">
         <p>
           Don't have an account?{' '}
-          <Link to="/register" className="nav-link">
+          <Link to="/register" className="nav-link ">
             Sign up here
           </Link>
         </p>

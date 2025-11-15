@@ -1,9 +1,29 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authAPI } from '../services/api';
 
-const AuthContext = createContext();
+interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: string;
+}
 
-export const useAuth = () => {
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  error: string;
+  login: (username: string, password: string) => Promise<{
+    success: boolean; error?: string
+  }>;
+  register: (userData: any) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
+  clearError: () => void;
+  isAuthenticated: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
@@ -11,8 +31,12 @@ export const useAuth = () => {
   return context;
 };
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -28,11 +52,24 @@ export const AuthProvider = ({ children }) => {
 
   const getCurrentUser = async () => {
     try {
-      const userData = await authAPI.getCurrentUser();
+      const token = localStorage.getItem('access_token');
+      if (!token) return null;
+
+      const response = await authAPI.getCurrentUser();
+      const userData = response.User || response.data;
+
       setUser(userData);
+
+      localStorage.setItem('user_role', userData.role);
+
+      return userData
+
     } catch (error) {
       console.error('Failed to get current user:', error);
       localStorage.removeItem('access_token');
+      localStorage.removeItem('user_role');
+      setUser(null);
+      return null;
     } finally {
       setLoading(false);
     }
@@ -43,36 +80,41 @@ export const AuthProvider = ({ children }) => {
       setError('');
       setLoading(true);
 
-      const tokenData = await authAPI.login(username, password);
+      const { status, tokenData } = await authAPI.login(username, password);
       localStorage.setItem('access_token', tokenData.access_token);
 
       // Get user info after successful login
-      await getCurrentUser();
+      if (status === 200) {
+        localStorage.setItem('access_token', tokenData.access_token);
+        const userData = await getCurrentUser();
+        console.log('🔍 AuthContext: Login successful');
+        return { success: true, user: userData };
+      }
 
-      return { success: true };
+      const errorMsg = 'Unexpected status code: ' + status;
+      setError(errorMsg);
+      return { success: false, error: errorMsg };
+
     } catch (error) {
-      console.error('Login error:', error);
+
+      // console.log('🔴 AuthContext: Login error caught:', error); // Debug log
+
       let errorMessage = 'Login failed';
 
       if (error.response) {
-        // Handle different error response formats
-        if (error.response.data?.detail) {
-          errorMessage = error.response.data.detail;
-        } else if (error.response.data?.message) {
-          errorMessage = error.response.data.message;
-        } else if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data;
-        } else if (error.response.status === 401) {
+        if (error.response.status === 401) {
           errorMessage = 'Invalid username or password';
         } else if (error.response.status === 500) {
           errorMessage = 'Server error. Please try again later.';
+        } else if (error.response.data?.detail) {
+          errorMessage = error.response.data.detail;
         }
       } else if (error.request) {
         errorMessage = 'Unable to connect to server. Please check your connection.';
       }
-
+      console.log('🔍 Setting error:', errorMessage); // Debug
       setError(errorMessage);
-      return { success: false, error: errorMessage };
+      return { success: false, error: errorMessage, status: error.response?.status };
     } finally {
       setLoading(false);
     }
@@ -111,7 +153,9 @@ export const AuthProvider = ({ children }) => {
         errorMessage = 'Unable to connect to server. Please check your connection.';
       }
 
+      console.log('🔍 AuthContext: Setting error message:', errorMessage);
       setError(errorMessage);
+      console.log('🔍 AuthContext: Error state after setError should be:', errorMessage);
       return { success: false, error: errorMessage };
     } finally {
       setLoading(false);

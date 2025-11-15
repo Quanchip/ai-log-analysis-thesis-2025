@@ -5,24 +5,25 @@ from sqlalchemy.orm import Session
 
 from . import schemas
 from .service import UserService
-from .dependencies import get_database
+from .dependencies import CurrentUser, AdminUser
 from .utils import oauth2_bearer
 from ..database import get_db
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
-def get_current_user_dependency(token: Annotated[str, Depends(oauth2_bearer)], db: Session = Depends(get_db)) -> dict:
-    user_service = UserService(db)
-    return user_service.get_current_user(token)
 
-user_dependency = Annotated[dict, Depends(get_current_user_dependency)]
+# def get_current_user_dependency(token: Annotated[str, Depends(oauth2_bearer)], db: Session = Depends(get_db)) -> dict:
+#     user_service = UserService(db)
+#     return user_service.get_current_user(token)
+
+# user_dependency = Annotated[dict, Depends(get_current_user_dependency)]
 
 
 # Get all users
-@router.get('/users', status_code=status.HTTP_200_OK,
-             response_model=List[schemas.User], summary="Get all users")
+@router.get('/admin/users', status_code=status.HTTP_200_OK,
+             response_model=List[schemas.UserResponse], summary="Get all users")
 
-def get_all_user(db: Session = Depends(get_db)):
+def get_all_user(current_admin: AdminUser, db: Session = Depends(get_db)):
     user_service = UserService(db)
     users = user_service.get_all_users()
     return users
@@ -30,7 +31,7 @@ def get_all_user(db: Session = Depends(get_db)):
 
 # Get user login
 @router.get('/user', status_code=status.HTTP_200_OK)
-def get_user_login(current_user: user_dependency, db: Session = Depends(get_db)):
+def get_user_login(current_user: CurrentUser, db: Session = Depends(get_db)):
     user_service = UserService(db)
     user_login = user_service.get_username(current_user)
     return user_login
