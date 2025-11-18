@@ -200,13 +200,38 @@ def ml_analysis_task(self, job_id: str):
 
             print(f"[ML Task] ✓ ML prediction completed: {result['anomaly_count']} anomalies found")
 
+            # Step 4: Extract anomaly sessions
+            # Note: ML predicts on sessions, not individual log lines
+            print(f"[ML Task] Extracting anomaly sessions...")
+
+            # Get anomaly indices (sessions that are anomalies)
+            anomaly_indices = [i for i, pred in enumerate(result["predictions"]) if pred == 1]
+
+            # Read the CSV to get session information
+            df = pd.read_csv(temp_csv.name)
+
+            # Group by BlockId (session identifier in HDFS logs) and get first row of each session
+            # This gives us one representative log entry per session
+            if 'BlockId' in df.columns:
+                unique_sessions = df.groupby('BlockId').first().reset_index()
+
+                # Get anomaly sessions (limit to first 1000 for performance)
+                anomaly_sessions = unique_sessions.iloc[anomaly_indices[:1000]]
+                anomaly_logs = anomaly_sessions.to_dict('records')
+            else:
+                # Fallback: If no BlockId, treat each row as a session
+                anomaly_logs = df.iloc[anomaly_indices[:1000]].to_dict('records')
+
+            print(f"[ML Task] ✓ Extracted {len(anomaly_logs)} anomaly sessions")
+
             analysis_result = AnalysisResult(
                 log_file_id=job.file_id,
                 total_logs=result["total_logs"],
                 anomaly_count=result["anomaly_count"],
                 normal_count=result["normal_count"],
                 anomaly_percentage=result["anomaly_percentage"],
-                predictions=result["predictions"]
+                predictions=result["predictions"],
+                anomaly_logs=anomaly_logs  # Store actual log entries
             )
 
             db.add(analysis_result)

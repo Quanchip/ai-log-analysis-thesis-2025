@@ -239,5 +239,6 @@ async def get_job_results(
         "normal_count": analysis.normal_count,
         "anomaly_percentage": analysis.anomaly_percentage,
         "predictions": analysis.predictions,  # Array of predictions (0=normal, 1=anomaly)
+        "anomaly_logs": analysis.anomaly_logs,  # Actual anomaly log entries with content
         "created_at": analysis.created_at.isoformat()
     }
