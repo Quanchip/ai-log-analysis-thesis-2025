@@ -72,4 +72,25 @@ export const authAPI = {
   },
 };
 
+// Jobs API calls
+export const jobsAPI = {
+  // Get recent jobs for current user
+  getRecentJobs: async (limit = 10) => {
+    const response = await api.get(`/api/jobs/recent?limit=${limit}`);
+    return response.data;
+  },
+
+  // Get job status
+  getJobStatus: async (jobId) => {
+    const response = await api.get(`/api/jobs/${jobId}/status`);
+    return response.data;
+  },
+
+  // Get job results
+  getJobResults: async (jobId) => {
+    const response = await api.get(`/api/jobs/${jobId}/results`);
+    return response.data;
+  },
+};
+
 export default api;

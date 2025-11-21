@@ -7,7 +7,7 @@ const Dashboard = () => {
 
   const handleStartAnalysis = () => {
     navigate('/upload');
-  }
+  };
 
   return (
     <div className="dashboard">
@@ -35,7 +35,7 @@ const Dashboard = () => {
             <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
               View your recent log analysis sessions and results.
             </p>
-            <button className="btn btn-outline">
+            <button className="btn btn-outline" onClick={() => navigate('/activity')}>
               View Activity
             </button>
           </div>

@@ -143,6 +143,7 @@ def create_task(self, job_id: str):
         # Update job status to FAILED
         if job:
             job.status = JobStatus.FAILED
+            job.completed_at = datetime.datetime.utcnow()
             db.commit()
 
         raise  # Re-raise to let Celery handle retry logic
@@ -241,6 +242,7 @@ def ml_analysis_task(self, job_id: str):
             print(f"[ML Task] ✓ Analysis result saved with ID {analysis_result.id}")
 
             job.status = JobStatus.COMPLETED
+            job.completed_at = datetime.datetime.utcnow()
             db.commit()
 
             print(f"[ML Task] ✓ Job {job_id} marked as COMPLETED")
@@ -266,6 +268,7 @@ def ml_analysis_task(self, job_id: str):
         # Update job with error
         if job:
             job.status = JobStatus.FAILED
+            job.completed_at = datetime.datetime.utcnow()
             db.commit()
 
         raise

@@ -2,6 +2,7 @@ from multiprocessing.pool import AsyncResult
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from typing import List
 import asyncio
 import json
 
@@ -10,10 +11,45 @@ from ..celery import celery
 from ..database import get_db
 from ..auth.dependencies import CurrentUser
 from ..jobs.models import ProcessingJob, JobStatus
+from ..jobs.schemas import RecentJobResponse
+from ..jobs.service import get_recent_jobs
 from ..logs.models import LogFile
 from ..ml.models import AnalysisResult
 
 router = APIRouter(prefix="/api/jobs", tags=["Jobs"])
+
+
+@router.get("/recent", response_model=List[RecentJobResponse])
+async def get_user_recent_jobs(
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),
+    limit: int = 10
+):
+    """
+    Get user's recent processing jobs
+
+    Args:
+        limit: Maximum number of jobs to return (default 10, max 50)
+
+    Returns:
+        List of recent jobs with filename, status, and timestamps
+    """
+    # Limit maximum to 50
+    limit = min(limit, 50)
+
+    result = get_recent_jobs(
+        user_id=current_user["id"],
+        limit=limit,
+        db=db
+    )
+
+    if result["error"]:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=result["message"]
+        )
+
+    return result["data"]
 
 
 @router.get("/{job_id}/stream")

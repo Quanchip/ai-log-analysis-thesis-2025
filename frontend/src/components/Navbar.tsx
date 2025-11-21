@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const Navbar = () => {
-  const { user, logout, isAuthenticated} = useAuth();
+  const { user, logout, isAuthenticated } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -12,7 +12,11 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <div className="container">
-        <div className="nav-content">
+        <div className="nav-content" style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}>
           <Link to="/" className="logo">
             AI Log Analysis
           </Link>
