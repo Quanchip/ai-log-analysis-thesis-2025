@@ -45,7 +45,7 @@ const Dashboard = () => {
             <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
               Configure your analysis preferences and account settings.
             </p>
-            <button className="btn btn-outline">
+            <button className="btn btn-outline" onClick={() => navigate('/settings')}>
               Open Settings
             </button>
           </div>

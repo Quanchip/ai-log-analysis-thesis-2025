@@ -70,6 +70,12 @@ export const authAPI = {
     const response = await api.get('/auth/users');
     return response.data;
   },
+
+  // Change password
+  changePassword: async (passwordData) => {
+    const response = await api.put('/auth/change-password', passwordData);
+    return response.data;
+  },
 };
 
 // Jobs API calls
@@ -92,5 +98,8 @@ export const jobsAPI = {
     return response.data;
   },
 };
+
+// Named exports for convenience
+export const { changePassword } = authAPI;
 
 export default api;

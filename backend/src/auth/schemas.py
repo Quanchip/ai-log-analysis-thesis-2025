@@ -20,3 +20,7 @@ class UserResponse (BaseModel):
     username: str
     email: str
     role: str
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str

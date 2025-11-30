@@ -77,11 +77,11 @@ const RecentActivity = () => {
   // Get status badge style
   const getStatusStyle = (status: string) => {
     const styles = {
-      completed: { bg: '#d1fae5', color: '#065f46', icon: '✅' },
-      processing: { bg: '#dbeafe', color: '#1e40af', icon: '⏳' },
-      queued: { bg: '#e0e7ff', color: '#3730a3', icon: '⏳' },
-      failed: { bg: '#fee2e2', color: '#991b1b', icon: '❌' },
-      pending: { bg: '#f3f4f6', color: '#374151', icon: '⏳' }
+      completed: { bg: '#d1fae5', color: '#065f46'},
+      processing: { bg: '#dbeafe', color: '#1e40af',},
+      queued: { bg: '#e7f5b3ff', color: '#4a4916ff'},
+      failed: { bg: '#fee2e2', color: '#991b1b'},
+      pending: { bg: '#f3f4f6', color: '#374151'}
     };
     return styles[status] || styles.pending;
   };
@@ -228,7 +228,7 @@ const RecentActivity = () => {
                 }}
                 onMouseEnter={(e) => {
                   if (job.status === 'completed') {
-                    e.currentTarget.style.backgroundColor = '#f9fafb';
+                    e.currentTarget.style.backgroundColor = '#9d9d9dff';
                   }
                 }}
                 onMouseLeave={(e) => {

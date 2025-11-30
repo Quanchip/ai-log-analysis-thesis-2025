@@ -90,5 +90,34 @@ class UserService:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                                 detail='Could not validate user')
 
+    def change_password(self, user_id: int, password_data: schemas.PasswordChange) -> Dict:
+        """Change user password"""
+        user = self.db.query(models.Users).filter(models.Users.id == user_id).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        # Verify current password
+        if not bcrypt_context.verify(password_data.current_password, user.password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect"
+            )
+
+        # Validate new password length
+        if len(password_data.new_password) < 6:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password must be at least 6 characters"
+            )
+
+        # Update password
+        user.password = bcrypt_context.hash(password_data.new_password)
+        self.db.commit()
+
+        return {"message": "Password changed successfully"}
 
 

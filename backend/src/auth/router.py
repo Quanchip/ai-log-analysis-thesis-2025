@@ -52,3 +52,15 @@ def login_for_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     auth_service = UserService(db)
     token_data = auth_service.login_for_access_token(form_data)
     return token_data
+
+@router.put('/change-password', status_code=status.HTTP_200_OK,
+            summary="Change user password")
+def change_password(
+    password_data: schemas.PasswordChange,
+    current_user: CurrentUser,
+    db: Session = Depends(get_db)
+):
+    """Change password for currently authenticated user"""
+    user_service = UserService(db)
+    result = user_service.change_password(current_user["id"], password_data)
+    return result
