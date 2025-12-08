@@ -153,6 +153,116 @@ const LogUpload = () => {
 
   return (
     <div style={{ maxWidth: '600px', margin: '0 auto', padding: '50px' }}>
+      {/* Instructions Panel */}
+      <div style={{
+        backgroundColor: '#fff',
+        borderRadius: '12px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        padding: '24px',
+        marginBottom: '24px',
+        border: '1px solid #e5e7eb'
+      }}>
+        <h2 style={{
+          margin: '0 0 16px 0',
+          fontSize: '20px',
+          fontWeight: '700',
+          color: '#111827',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '24px' }}>ℹ️</span>
+          How It Works
+        </h2>
+
+        <div style={{
+          display: 'grid',
+          gap: '12px',
+          fontSize: '14px',
+          color: '#4b5563'
+        }}>
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            padding: '12px',
+            backgroundColor: '#f9fafb',
+            borderRadius: '8px'
+          }}>
+            <span style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              color: '#3b82f6',
+              minWidth: '24px'
+            }}>1</span>
+            <div>
+              <strong style={{ color: '#111827' }}>Upload Your Log File</strong>
+              <p style={{ margin: '4px 0 0 0', lineHeight: '1.5' }}>
+                Select or drag & drop a .log file from your system
+              </p>
+            </div>
+          </div>
+
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            padding: '12px',
+            backgroundColor: '#f9fafb',
+            borderRadius: '8px'
+          }}>
+            <span style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              color: '#3b82f6',
+              minWidth: '24px'
+            }}>2</span>
+            <div>
+              <strong style={{ color: '#111827' }}>Automated Analysis</strong>
+              <p style={{ margin: '4px 0 0 0', lineHeight: '1.5' }}>
+                System will parse log patterns, detects anomalies, and identifies issues
+              </p>
+            </div>
+          </div>
+
+          <div style={{
+            display: 'flex',
+            gap: '12px',
+            padding: '12px',
+            backgroundColor: '#f9fafb',
+            borderRadius: '8px'
+          }}>
+            <span style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              color: '#3b82f6',
+              minWidth: '24px'
+            }}>3</span>
+            <div>
+              <strong style={{ color: '#111827' }}>Get Insights</strong>
+              <p style={{ margin: '4px 0 0 0', lineHeight: '1.5' }}>
+                View structured logs, anomaly reports, and AI-powered recommendations
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          marginTop: '16px',
+          padding: '12px',
+          backgroundColor: '#eff6ff',
+          borderRadius: '8px',
+          fontSize: '13px',
+          color: '#1e40af',
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'flex-start'
+        }}>
+          <span style={{ fontSize: '16px', minWidth: '20px' }}>💡</span>
+          <span>
+            <strong>Tip:</strong> For best results, upload log files with clear timestamps and structured formats (HDFS, Apache, Syslog, etc.)
+          </span>
+        </div>
+      </div>
+
       {/* Drag & Drop Area */}
       <div
         onDragOver={handleDragOver}

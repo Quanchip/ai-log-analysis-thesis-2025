@@ -49,12 +49,12 @@ class UserService:
         user = self.authenticate_user(form_data.username, form_data.password)
         if not user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Validation failed')
-        token = self.create_access_token(user.username, user.id, user.role.value, timedelta(minutes=120))
+        token = self.create_access_token(user.username, user.id, user.email, user.role.value, timedelta(minutes=120))
 
         return {'access_token': token, 'token_type': 'bearer'}
     
-    def create_access_token(self, username: str, user_id: int, role: str, expires_delta: timedelta):
-        encode = {'sub': username, 'id': user_id, 'role': role}
+    def create_access_token(self, username: str, user_id: int, email: str, role: str, expires_delta: timedelta):
+        encode = {'sub': username, 'id': user_id, 'email': email, 'role': role}
         expires = datetime.now(timezone.utc) + expires_delta
         encode.update({'exp': expires})
         return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -78,6 +78,7 @@ class UserService:
 
             username: str = payload.get('sub')
             user_id: int = payload.get('id')
+            email: str = payload.get('email')
             role: str = payload.get('role')
 
             if username is None or user_id is None:
@@ -85,7 +86,7 @@ class UserService:
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Could not validate user"
                 )
-            return {'username': username, 'id': user_id, 'role': role}
+            return {'username': username, 'id': user_id, 'email': email, 'role': role}
         except JWTError:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                                 detail='Could not validate user')

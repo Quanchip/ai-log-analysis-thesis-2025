@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import PasswordChange from './PasswordChange';
@@ -5,6 +6,7 @@ import PasswordChange from './PasswordChange';
 const Settings = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   return (
     <div className="dashboard">
@@ -84,7 +86,16 @@ const Settings = () => {
               boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
             }}
           >
-            <PasswordChange />
+            <h3 style={{ marginBottom: '1rem', color: '#1f2937' }}>Security</h3>
+            <p style={{ marginBottom: '1.5rem', color: '#6b7280', fontSize: '0.9rem' }}>
+              Manage your password and security settings
+            </p>
+            <button
+              className="btn btn-primary"
+              onClick={() => setShowPasswordModal(true)}
+            >
+              Change Password
+            </button>
           </div>
 
           {/* Actions */}
@@ -95,6 +106,62 @@ const Settings = () => {
           </div>
         </div>
       </div>
+
+      {/* Password Change Modal */}
+      {showPasswordModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowPasswordModal(false)}
+        >
+          <div
+            style={{
+              background: 'white',
+              padding: '2rem',
+              borderRadius: '8px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '90vh',
+              overflow: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 style={{ margin: 0, color: '#1f2937' }}>Change Password</h2>
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#6b7280',
+                  padding: '0',
+                  width: '30px',
+                  height: '30px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <PasswordChange onSuccess={() => setShowPasswordModal(false)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
