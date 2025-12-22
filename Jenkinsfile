@@ -23,7 +23,7 @@ pipeline {
     stage("Smoke test"){
       steps {
         script {
-          dockerImages.inside {
+          dockerImage.inside {
             sh '''
               python --version
               python -c "import sys; print('Python OK')"
