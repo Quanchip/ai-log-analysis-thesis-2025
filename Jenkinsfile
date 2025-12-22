@@ -2,6 +2,12 @@ pipeline {
   agent { label 'docker-agent'}
 
   stages {
+
+      stage('Clean workspace') {
+          steps {
+              cleanWs()
+          }
+      }
     
     stage('Checkout') {
       steps {
