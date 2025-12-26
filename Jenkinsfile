@@ -43,7 +43,10 @@ pipeline {
       steps {
         script {
           withSonarQubeEnv(credentialsId: 'jenkins-sonarqube-token') {
-          sh 'sonar-scanner'
+          sh '''sonar-scanner \
+                -Dsonar.projectKey=ai-log-analysis-thesis \
+                -Dsonar.projectName="AI Log Analysis Thesis"      
+            '''
           }
         }
       }
