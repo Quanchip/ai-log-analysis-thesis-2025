@@ -44,6 +44,7 @@ pipeline {
         script {
           withSonarQubeEnv('sonarqube') {
           sh 'sonar-scanner'
+          }
         }
       }
     }
