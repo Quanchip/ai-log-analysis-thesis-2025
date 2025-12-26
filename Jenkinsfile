@@ -38,5 +38,14 @@ pipeline {
         }
       }
     }
+
+    stage("SonarQube Analysis"){
+      steps {
+        script {
+          withSonarQubeEnv('sonarqube') {
+          sh 'sonar-scanner'
+        }
+      }
+    }
   }
 }
