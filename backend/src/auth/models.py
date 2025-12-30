@@ -14,8 +14,6 @@ class Users(Base):
     username = Column(String(255), unique=True)
     email = Column(String(255))
     password = Column(String(255))
-
-    # New simplified admin fields
     role = Column(Enum(UserRole), default=UserRole.user, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     

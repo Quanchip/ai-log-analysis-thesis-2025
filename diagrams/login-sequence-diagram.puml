@@ -1,0 +1,71 @@
+@startuml Login_Sequence_Diagram
+
+title User Login Flow
+
+skinparam defaultFontName Arial
+skinparam sequenceMessageAlign center
+
+actor User
+participant "Login Component" as Login
+participant "AuthContext" as Auth
+participant "API Service" as API
+participant "FastAPI Backend" as Backend
+database "Database" as DB
+
+User -> Login: Enter credentials\nClick "Login"
+activate Login
+
+Login -> Auth: login(username, password)
+activate Auth
+
+Auth -> API: POST /auth/token
+activate API
+
+API -> Backend: FormData: {username, password}
+activate Backend
+
+Backend -> DB: Verify credentials
+activate DB
+DB --> Backend: User data
+deactivate DB
+
+Backend -> Backend: Generate JWT token
+
+Backend --> API: {access_token, token_type}
+deactivate Backend
+
+API --> Auth: Token data
+deactivate API
+
+Auth -> Auth: localStorage.setItem('access_token')
+
+Auth -> API: GET /auth/me\n(with Bearer token)
+activate API
+
+API -> Backend: Get current user
+activate Backend
+
+Backend -> Backend: Validate JWT token
+
+Backend -> DB: Query user details
+activate DB
+DB --> Backend: {username, id, role}
+deactivate DB
+
+Backend --> API: User data
+deactivate Backend
+
+API --> Auth: {username, id, role}
+deactivate API
+
+Auth -> Auth: setUser(userData)\nsetIsAuthenticated(true)
+
+Auth --> Login: Login success
+deactivate Auth
+
+Login -> Login: navigate('/dashboard')
+
+Login --> User: Redirect to Dashboard
+deactivate Login
+
+@enduml

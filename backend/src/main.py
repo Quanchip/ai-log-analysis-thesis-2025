@@ -32,14 +32,4 @@ app.include_router(logs_router.router)
 app.include_router(jobs_router.router)
 app.include_router(llm_router.router)
 
-
-
-# Import models to register them with Base before create_all
-# Just importing the modules triggers class registration
-# _ = auth_models.Users  # noqa
-# _ = logs_model.LogFile  # noqa
-# _ = jobs_model.ProcessingJob  # noqa
-# _ = ml_model.AnalysisResult  # noqa
-
-# Now create all tables (all models are registered)
 Base.metadata.create_all(engine)

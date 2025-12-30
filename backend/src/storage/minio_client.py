@@ -21,7 +21,7 @@ class MinIOClient:
                 print(f"Bucket '{settings.MINIO_BUCKET_NAME}' created")
         except S3Error as e:
             print(f"Error creating bucket: {e}")
-    
+
     def upload_file(self, file_data: bytes, object_name: str, content_type: str):
         """Upload file to MinIO"""
         try:

@@ -138,7 +138,7 @@ async def get_job_status(
             "message": "Parsing log file..."
         }
     """
-    # Expire all cached data to ensure fresh query
+
     db.expire_all()
 
     job = db.query(ProcessingJob).filter(
@@ -152,52 +152,6 @@ async def get_job_status(
             detail="Job not found"
         )
 
-
-    # if job.celery_task_id:
-    #     task = AsyncResult(job.celery_task_id, app=celery)
-        
-    #     # Check Celery task state
-    #     if task.state == 'PROGRESS':
-    #         # Get progress from Celery task metadata
-    #         task_progress = task.info.get('progress', 0) if task.info else 0
-    #         task_message = task.info.get('message', 'Processing...') if task.info else 'Processing...'
-            
-    #         # Map Celery progress (0-100) to our range (30-100)
-    #         mapped_progress = 30 + int((task_progress * 70) / 100)
-            
-    #         return {
-    #             "job_id": job.id,
-    #             "status": "PROCESSING",
-    #             "progress": mapped_progress,
-    #             "message": task_message
-    #         }
-    #     elif task.state == 'SUCCESS':
-    #         # Update job status if not already done
-    #         if job.status != JobStatus.COMPLETED:
-    #             job.status = JobStatus.COMPLETED
-    #             db.commit()
-            
-    #         return {
-    #             "job_id": job.id,
-    #             "status": "COMPLETED",
-    #             "progress": 100,
-    #             "message": "Analysis complete!"
-    #         }
-    #     elif task.state == 'FAILURE':
-    #         # Update job status if not already done
-    #         if job.status != JobStatus.FAILED:
-    #             job.status = JobStatus.FAILED
-    #             db.commit()
-            
-    #         return {
-    #             "job_id": job.id,
-    #             "status": "FAILED",
-    #             "progress": 0,
-    #             "message": str(task.info) if task.info else "Processing failed"
-    #         }    
-
-    # Calculate progress based on status
-    # Upload is 0-30%, so processing starts at 30%
     progress_map = {
         JobStatus.PENDING: 30,
         JobStatus.QUEUED: 35,

@@ -9,7 +9,6 @@ from .dependencies import CurrentUser, AdminUser
 from .utils import oauth2_bearer
 from ..database import get_db
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 # def get_current_user_dependency(token: Annotated[str, Depends(oauth2_bearer)], db: Session = Depends(get_db)) -> dict:
@@ -17,7 +16,14 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 #     return user_service.get_current_user(token)
 
 # user_dependency = Annotated[dict, Depends(get_current_user_dependency)]
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
+# Get user login
+@router.get('/user', status_code=status.HTTP_200_OK)
+def get_user_login(current_user: CurrentUser, db: Session = Depends(get_db)):
+    user_service = UserService(db)
+    user_login = user_service.get_username(current_user)
+    return user_login
 
 # Get all users
 @router.get('/admin/users', status_code=status.HTTP_200_OK,
@@ -27,15 +33,6 @@ def get_all_user(current_admin: AdminUser, db: Session = Depends(get_db)):
     user_service = UserService(db)
     users = user_service.get_all_users()
     return users
-
-
-# Get user login
-@router.get('/user', status_code=status.HTTP_200_OK)
-def get_user_login(current_user: CurrentUser, db: Session = Depends(get_db)):
-    user_service = UserService(db)
-    user_login = user_service.get_username(current_user)
-    return user_login
-
 
 
 @router.post('/users', status_code=status.HTTP_201_CREATED,

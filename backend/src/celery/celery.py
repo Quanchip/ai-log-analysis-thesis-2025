@@ -20,7 +20,6 @@ import pandas as pd
 load_dotenv("../../.env")
 
 celery = Celery(__name__)
-
 celery.conf.broker_url = os.environ.get("CELERY_BROKER_URL")
 celery.conf.result_backend = os.environ.get("CELERY_RESULT_BACKEND")
 
@@ -87,7 +86,7 @@ def create_task(self, job_id: str):
         # Parse log with HDFS format (or auto-detect)
         parse_result = parse_log_content(
             log_content=log_content,
-            log_format_name="hdfs",  # Specify format for HDFS logs
+            log_format_name="hdfs",
             st=0.5,
             depth=4
         )
@@ -272,3 +271,6 @@ def ml_analysis_task(self, job_id: str):
             db.commit()
 
         raise
+
+
+
