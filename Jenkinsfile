@@ -26,9 +26,9 @@ pipeline {
     stage("Build"){
       steps {
         script {
-          dockerImage = docker.build(
-              "python-backend:${env.BUILD_NUMBER}",
-              "-f backend/Dockerfile backend"
+          backendImage = docker.build(
+              "${IMAGE_NAME}",
+              "./backend"
           )
         }
       }
@@ -36,7 +36,7 @@ pipeline {
     stage("Smoke test"){
       steps {
         script {
-          dockerImage.inside {
+          backendImage.inside {
             sh '''
               python --version
               python -c "import sys; print('Python OK')"
@@ -52,6 +52,7 @@ pipeline {
           withSonarQubeEnv(credentialsId: 'jenkins-sonarqube-token') {
           sh '''sonar-scanner \
                 -Dsonar.projectKey=ai-log-analysis-thesis \
+                -Dsonar.sources=backend \
                 -Dsonar.projectName="AI Log Analysis Thesis"      
             '''
           }
@@ -67,18 +68,40 @@ pipeline {
       }
     }
 
+    stage ("Trivy Scan") {
+      steps {
+        script {
+          sh '''
+            docker run -v \
+            /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy image \
+            ${IMAGE_NAME}:latest \
+            --no-progress \
+            --scanners vuln \
+            --exit-code 0 \
+            --severity HIGH,CRITICAL \
+            --format table'
+          '''
+        }
+      }
+    }
+
     stage("Build & Push Backend Image"){
       steps {
         script {
           docker.withRegistry('', DOCKER_PASS) {
-            def backendImage = docker.build (
-                "${IMAGE_NAME}",
-                "./backend"
-            )
-
             backendImage.push("${IMAGE_TAG}")
             backendImage.push("latest")
           }
+        }
+      }
+    }
+
+    stage("Cleanup Artifacts"){
+      steps {
+        script {
+          sh "docker rmi ${IMAGE_NAME}:${IMAGE_TAG}"
+          sh "docker rmi ${IMAGE_NAME}:latest"
         }
       }
     }
