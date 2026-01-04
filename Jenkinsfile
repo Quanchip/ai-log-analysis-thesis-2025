@@ -1,14 +1,22 @@
 pipeline {
   agent { label 'docker-agent'}
 
+  environment {
+    APP_NAME = "thesis-pipeline"
+    RELEASE = "1.0.0"
+    DOCKER_USER = "qaun10052003abc"
+    DOCKER_PASS = 'dockerhub'
+    IMAGE_NAME = "${DOCKER_USER}" + "/" + "${APP_NAME}"
+    IMAGE_TAG = "${RELEASE}" - "${BUILD_NUMBER}"
+  }
+
   stages {
 
-      stage('Clean workspace') {
-          steps {
-              cleanWs()
-          }
-      }
-    
+    stage('Clean workspace') {
+        steps {
+            cleanWs()
+        }
+    }
     stage('Checkout') {
       steps {
           git branch: 'main', credentialsId: 'github', url: 'https://github.com/Quanchip/ai-log-analysis-thesis-2025'
@@ -25,7 +33,6 @@ pipeline {
         }
       }
     }
-
     stage("Smoke test"){
       steps {
         script {
@@ -56,6 +63,22 @@ pipeline {
       steps {
         script {
           waitForQualityGate abortPipeline: true, credentialsId: 'jenkins-sonarqube-token'
+        }
+      }
+    }
+
+    stage("Build & Push Backend Image"){
+      steps {
+        script {
+          docker.withRegistry('', DOCKER_PASS) {
+            def backendImage = docker.build (
+                "${IMAGE_NAME}",
+                "./backend"
+            )
+
+            backendImage.push("${IMAGE_TAG}")
+            backendImage.push("latest")
+          }
         }
       }
     }
