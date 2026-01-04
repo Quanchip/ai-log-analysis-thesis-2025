@@ -80,7 +80,7 @@ pipeline {
             --scanners vuln \
             --exit-code 0 \
             --severity HIGH,CRITICAL \
-            --format table'
+            --format table
           '''
         }
       }
