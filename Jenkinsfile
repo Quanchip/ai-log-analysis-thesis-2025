@@ -1,6 +1,10 @@
 pipeline {
   agent { label 'docker-agent'}
 
+  options {
+    skipDefaultCheckout(true)
+  }
+
   environment {
     APP_NAME = "thesis-pipeline"
     RELEASE = "1.0.0"
