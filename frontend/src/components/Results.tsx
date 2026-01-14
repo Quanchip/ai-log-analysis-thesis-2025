@@ -2,16 +2,17 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import AnomalyAnalysisModal from './LlmAnomlyAnalysis';
+import SessionDetailModal from './SessionDetailModal';
 
-interface AnomalyLog {
-  BlockId?: string;
-  Date?: string;
-  Time?: string;
-  Level?: string;
-  Content?: string;
-  EventId?: string;
-  LineId?: number;
-  [key: string]: any;  // For additional fields
+interface AnomalySession {
+  BlockId: string;
+  log_count: number;
+  first_timestamp?: string;
+  last_timestamp?: string;
+  unique_events?: number;
+  event_distribution?: { [key: string]: number };
+  preview_content?: string;
+  preview_level?: string;
 }
 
 interface AnalysisResults {
@@ -22,7 +23,7 @@ interface AnalysisResults {
   normal_count: number;
   anomaly_percentage: number;
   predictions: number[];
-  anomaly_logs: AnomalyLog[];  // Actual anomaly log entries
+  anomaly_logs: AnomalySession[];  // Session summaries
   created_at: string;
 }
 
@@ -32,7 +33,8 @@ const Results = () => {
   const [results, setResults] = useState<AnalysisResults | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedLog, setSelectedLog] = useState<AnomalyLog | null>(null);
+  const [selectedSession, setSelectedSession] = useState<AnomalySession | null>(null);
+  const [showSessionModal, setShowSessionModal] = useState(false);
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -178,7 +180,7 @@ const Results = () => {
         </div>
       </div>
 
-      {/* Anomaly Logs Section */}
+      {/* Anomaly Sessions Section */}
       <div style={{
         backgroundColor: '#fff',
         padding: '24px',
@@ -186,7 +188,7 @@ const Results = () => {
         boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
       }}>
         <h2 style={{ fontSize: '24px', fontWeight: '600', marginBottom: '16px', color: '#111827', margin: '0 0 16px 0' }}>
-          Anomaly Logs ({anomalyLogs.length > 0 ? `${anomalyLogs.length} shown` : results.anomaly_count})
+          Anomaly Sessions ({anomalyLogs.length > 0 ? `${anomalyLogs.length} shown` : results.anomaly_count})
         </h2>
 
         {anomalyLogs.length === 0 ? (
@@ -195,67 +197,127 @@ const Results = () => {
           </p>
         ) : (
           <div style={{ display: 'grid', gap: '12px', maxHeight: '600px', overflowY: 'auto' }}>
-            {anomalyLogs.map((log, idx) => (
+            {anomalyLogs.map((session, idx) => (
               <div
                 key={idx}
-                onClick={() => setSelectedLog(log)}
                 style={{
                   padding: '16px',
                   backgroundColor: '#fef3c7',
                   border: '1px solid #fbbf24',
                   borderRadius: '8px',
-                  cursor: 'pointer',
                   transition: 'all 0.2s',
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#fde68a';
-                  e.currentTarget.style.transform = 'translateX(4px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#fef3c7';
-                  e.currentTarget.style.transform = 'translateX(0)';
-                }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontWeight: '600', color: '#92400e' }}>
-                    {log.BlockId ? `Session: ${log.BlockId}` : `Log #${idx + 1}`}
-                  </span>
-                  <span style={{ fontSize: '12px', color: '#b45309' }}>
-                    Click for LLM suggestion →
-                  </span>
+                {/* Session Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div>
+                    <span style={{ fontWeight: '700', color: '#92400e', fontSize: '16px' }}>
+                      Session: {session.BlockId}
+                    </span>
+                    <div style={{ fontSize: '13px', color: '#b45309', marginTop: '4px' }}>
+                      {session.log_count} log{session.log_count > 1 ? 's' : ''} in this session
+                    </div>
+                  </div>
                 </div>
 
-                {/* Log Content */}
+                {/* Session Statistics */}
                 <div style={{
                   backgroundColor: '#fffbeb',
                   padding: '12px',
                   borderRadius: '6px',
-                  marginTop: '8px',
-                  fontFamily: 'monospace',
+                  marginBottom: '12px',
                   fontSize: '13px',
                   color: '#78350f',
-                  border: '1px solid #fde68a'
+                  border: '1px solid #fde68a',
+                  display: 'grid',
+                  gap: '6px'
                 }}>
-                  {log.Date && log.Time && (
-                    <div style={{ marginBottom: '4px', color: '#92400e' }}>
-                      <strong>Time:</strong> {log.Date} {log.Time}
+                  {session.first_timestamp && (
+                    <div>
+                      <strong>First Log:</strong> {session.first_timestamp}
                     </div>
                   )}
-                  {log.Level && (
-                    <div style={{ marginBottom: '4px', color: '#92400e' }}>
-                      <strong>Level:</strong> {log.Level}
+                  {session.last_timestamp && session.log_count > 1 && (
+                    <div>
+                      <strong>Last Log:</strong> {session.last_timestamp}
                     </div>
                   )}
-                  {log.Content && (
-                    <div style={{ marginTop: '8px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                      <strong>Content:</strong> {log.Content}
+                  {session.unique_events !== undefined && session.unique_events > 0 && (
+                    <div>
+                      <strong>Unique Event Types:</strong> {session.unique_events}
                     </div>
                   )}
-                  {log.EventId && (
-                    <div style={{ marginTop: '8px', fontSize: '11px', color: '#a16207' }}>
-                      Event ID: {log.EventId} {log.LineId && `| Line: ${log.LineId}`}
+                  {session.preview_level && (
+                    <div>
+                      <strong>Level:</strong> {session.preview_level}
                     </div>
                   )}
+                  {session.preview_content && (
+                    <div style={{ marginTop: '6px' }}>
+                      <strong>Preview:</strong> <span style={{ fontFamily: 'monospace', fontSize: '12px' }}>{session.preview_content.substring(0, 150)}{session.preview_content.length > 150 ? '...' : ''}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => {
+                      console.log("Opening session modal for:", session);
+                      console.log("BlockId:", session.BlockId);
+                      console.log("JobId:", jobId);
+
+                      if (!session.BlockId) {
+                        console.error("Session BlockId is missing!");
+                        alert("Error: Session BlockId is missing. Cannot view session details.");
+                        return;
+                      }
+
+                      if (!jobId) {
+                        console.error("JobId is missing!");
+                        alert("Error: Job ID is missing. Cannot view session details.");
+                        return;
+                      }
+
+                      setSelectedSession(session);
+                      setShowSessionModal(true);
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '10px 16px',
+                      backgroundColor: '#3b82f6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#3b82f6'}
+                  >
+                    View Full Session ({session.log_count} logs)
+                  </button>
+                  <button
+                    onClick={() => setSelectedSession(session)}
+                    style={{
+                      flex: 1,
+                      padding: '10px 16px',
+                      backgroundColor: '#8b5cf6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#7c3aed'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#8b5cf6'}
+                  >
+                    Get LLM Analysis
+                  </button>
                 </div>
               </div>
             ))}
@@ -263,12 +325,24 @@ const Results = () => {
         )}
       </div>
 
-      {/* LLM Analysis Modal */}
-      {selectedLog && (
-        <AnomalyAnalysisModal
-          log={selectedLog}
+      {/* Session Detail Modal */}
+      {showSessionModal && selectedSession && (
+        <SessionDetailModal
           jobId={jobId}
-          onClose={() => setSelectedLog(null)}
+          blockId={selectedSession.BlockId}
+          onClose={() => {
+            setShowSessionModal(false);
+            setSelectedSession(null);
+          }}
+        />
+      )}
+
+      {/* LLM Analysis Modal */}
+      {selectedSession && !showSessionModal && (
+        <AnomalyAnalysisModal
+          log={{ BlockId: selectedSession.BlockId, Content: selectedSession.preview_content || '' }}
+          jobId={jobId}
+          onClose={() => setSelectedSession(null)}
         />
       )}
     </div>

@@ -187,7 +187,7 @@ async def get_job_results(
     """
     Get ML analysis results for completed job
 
-    Returns analysis statistics and anomaly logs
+    Returns analysis statistics and anomaly session summaries
     """
     # Verify job belongs to user
     job = db.query(ProcessingJob).filter(
@@ -229,6 +229,89 @@ async def get_job_results(
         "normal_count": analysis.normal_count,
         "anomaly_percentage": analysis.anomaly_percentage,
         "predictions": analysis.predictions,  # Array of predictions (0=normal, 1=anomaly)
-        "anomaly_logs": analysis.anomaly_logs,  # Actual anomaly log entries with content
+        "anomaly_logs": analysis.anomaly_logs,  # Session summaries with log counts
         "created_at": analysis.created_at.isoformat()
+    }
+
+
+@router.get("/{job_id}/session/{block_id}")
+async def get_session_details(
+    job_id: str,
+    block_id: str,
+    current_user: CurrentUser,
+    db: Session = Depends(get_db)
+):
+    """
+    Get all logs for a specific session (BlockId)
+
+    Args:
+        job_id: The processing job ID
+        block_id: The BlockId of the session to retrieve
+
+    Returns:
+        All log entries for the specified session
+    """
+    from ..storage.minio_client import minio_client
+    import pandas as pd
+    import io
+
+    # Verify job belongs to user
+    job = db.query(ProcessingJob).filter(
+        ProcessingJob.id == job_id,
+        ProcessingJob.user_id == current_user["id"]
+    ).first()
+
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found"
+        )
+
+    if not job.result_file_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Processed CSV not found"
+        )
+
+    # Download CSV from MinIO
+    csv_data = minio_client.get_object(
+        bucket_name="processed-logs",
+        object_name=job.result_file_path
+    )
+
+    # Read CSV data
+    csv_bytes = csv_data.read()
+    df = pd.read_csv(io.BytesIO(csv_bytes))
+
+    # Recreate sessions the same way loglizer does (extract BlockId from Content)
+    import re
+    from collections import OrderedDict
+
+    data_dict = OrderedDict()
+
+    for idx, row in df.iterrows():
+        # Extract BlockIds from content using same regex as loglizer
+        blkId_list = re.findall(r'(blk_-?\d+)', str(row.get('Content', '')))
+        blkId_set = set(blkId_list)
+
+        for blk_Id in blkId_set:
+            if blk_Id not in data_dict:
+                data_dict[blk_Id] = []
+            data_dict[blk_Id].append(idx)  # Store row indices
+
+    # Find the requested session
+    if block_id not in data_dict:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {block_id} not found"
+        )
+
+    # Get all logs in this session
+    log_indices = data_dict[block_id]
+    session_logs = df.iloc[log_indices]
+
+    return {
+        "block_id": block_id,
+        "log_count": len(session_logs),
+        "logs": session_logs.to_dict('records')
     }

@@ -200,7 +200,7 @@ def ml_analysis_task(self, job_id: str):
 
             print(f"[ML Task] ✓ ML prediction completed: {result['anomaly_count']} anomalies found")
 
-            # Step 4: Extract anomaly sessions
+            # Step 4: Extract anomaly sessions with statistics
             # Note: ML predicts on sessions, not individual log lines
             print(f"[ML Task] Extracting anomaly sessions...")
 
@@ -210,19 +210,76 @@ def ml_analysis_task(self, job_id: str):
             # Read the CSV to get session information
             df = pd.read_csv(temp_csv.name)
 
-            # Group by BlockId (session identifier in HDFS logs) and get first row of each session
-            # This gives us one representative log entry per session
-            if 'BlockId' in df.columns:
-                unique_sessions = df.groupby('BlockId').first().reset_index()
+            # Recreate sessions the same way loglizer does (extract BlockId from Content)
+            import re
+            from collections import OrderedDict
 
-                # Get anomaly sessions (limit to first 1000 for performance)
-                anomaly_sessions = unique_sessions.iloc[anomaly_indices[:1000]]
-                anomaly_logs = anomaly_sessions.to_dict('records')
+            data_dict = OrderedDict()
+            row_to_session = {}  # Map row index to BlockId
+
+            for idx, row in df.iterrows():
+                # Extract BlockIds from content using same regex as loglizer
+                blkId_list = re.findall(r'(blk_-?\d+)', str(row.get('Content', '')))
+                blkId_set = set(blkId_list)
+
+                for blk_Id in blkId_set:
+                    if blk_Id not in data_dict:
+                        data_dict[blk_Id] = []
+                    data_dict[blk_Id].append(idx)  # Store row indices
+                    row_to_session[idx] = blk_Id  # Map this row to its session
+
+            # Build session summaries for anomalies
+            session_list = list(data_dict.keys())
+            anomaly_logs = []
+
+            print(f"[ML Task] Total sessions found: {len(session_list)}")
+            print(f"[ML Task] Total anomaly predictions: {len(anomaly_indices)}")
+            print(f"[ML Task] Anomaly session indices: {anomaly_indices[:10] if len(anomaly_indices) > 0 else 'None'}")
+
+            # Check if we found any sessions
+            if len(session_list) == 0:
+                print(f"[ML Task] ⚠ WARNING: No BlockIds found in log content!")
+                print(f"[ML Task] ⚠ The log file may not be HDFS format or BlockIds are not in content")
+                print(f"[ML Task] ⚠ Cannot create session summaries - anomaly_logs will be empty")
+                # Still continue - will create empty anomaly_logs array
             else:
-                # Fallback: If no BlockId, treat each row as a session
-                anomaly_logs = df.iloc[anomaly_indices[:1000]].to_dict('records')
+                for session_idx in anomaly_indices[:1000]:  # Limit to 1000 anomalies
+                    if session_idx < len(session_list):
+                        block_id = session_list[session_idx]
+                        log_indices = data_dict[block_id]
 
-            print(f"[ML Task] ✓ Extracted {len(anomaly_logs)} anomaly sessions")
+                        # Get all logs in this session
+                        session_logs = df.iloc[log_indices]
+
+                        if len(session_logs) > 0:
+                            # Get first and last log for time range
+                            first_log = session_logs.iloc[0]
+                            last_log = session_logs.iloc[-1]
+
+                            # Count event types in this session
+                            event_distribution = session_logs['EventId'].value_counts().to_dict() if 'EventId' in session_logs.columns else {}
+
+                            # Create session summary - ensure all values are JSON serializable
+                            session_summary = {
+                                'BlockId': str(block_id),  # Ensure string
+                                'log_count': int(len(session_logs)),  # Ensure int
+                                'first_timestamp': f"{first_log.get('Date', '')} {first_log.get('Time', '')}".strip(),
+                                'last_timestamp': f"{last_log.get('Date', '')} {last_log.get('Time', '')}".strip(),
+                                'unique_events': int(len(session_logs['EventId'].unique())) if 'EventId' in session_logs.columns else 0,
+                                'event_distribution': {str(k): int(v) for k, v in event_distribution.items()},
+                                # Include first log content as preview
+                                'preview_content': str(first_log.get('Content', '')),
+                                'preview_level': str(first_log.get('Level', '')),
+                            }
+                            anomaly_logs.append(session_summary)
+                    else:
+                        print(f"[ML Task] Warning: Anomaly index {session_idx} >= session count {len(session_list)}")
+
+            print(f"[ML Task] ✓ Extracted {len(anomaly_logs)} anomaly session summaries")
+            if len(anomaly_logs) > 0:
+                print(f"[ML Task] Sample BlockId: {anomaly_logs[0]['BlockId']}")
+            else:
+                print(f"[ML Task] ⚠ No anomaly session summaries created!")
 
             analysis_result = AnalysisResult(
                 log_file_id=job.file_id,
