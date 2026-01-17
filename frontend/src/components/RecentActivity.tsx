@@ -2,6 +2,64 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jobsAPI } from '../services/api';
 
+// Icons
+const Icons = {
+  Activity: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+    </svg>
+  ),
+  File: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+    </svg>
+  ),
+  ArrowLeft: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="19" y1="12" x2="5" y2="12" />
+      <polyline points="12 19 5 12 12 5" />
+    </svg>
+  ),
+  ArrowRight: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <polyline points="12 5 19 12 12 19" />
+    </svg>
+  ),
+  Upload: () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+  ),
+  Clock: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  ),
+  Loader: () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="2" x2="12" y2="6" />
+      <line x1="12" y1="18" x2="12" y2="22" />
+      <line x1="4.93" y1="4.93" x2="7.76" y2="7.76" />
+      <line x1="16.24" y1="16.24" x2="19.07" y2="19.07" />
+      <line x1="2" y1="12" x2="6" y2="12" />
+      <line x1="18" y1="12" x2="22" y2="12" />
+      <line x1="4.93" y1="19.07" x2="7.76" y2="16.24" />
+      <line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
+    </svg>
+  ),
+  Inbox: () => (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="22 12 16 12 14 15 10 15 8 12 2 12" />
+      <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" />
+    </svg>
+  ),
+};
+
 const RecentActivity = () => {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState([]);
@@ -100,200 +158,325 @@ const RecentActivity = () => {
   };
 
   return (
-    <div className="container" style={{ padding: '2rem 0' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: '700', color: '#1f2937', marginBottom: '0.5rem' }}>
-          Recent Activity
-        </h1>
-        <p style={{ color: '#6b7280' }}>
-          View all your log analysis jobs and their status
-        </p>
-      </div>
+    <div style={{
+      minHeight: 'calc(100vh - 56px)',
+      backgroundColor: '#f9fafb',
+      fontFamily: "'DM Sans', sans-serif",
+    }}>
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
 
-      {/* Filters */}
-      <div style={{
-        display: 'flex',
-        gap: '12px',
-        marginBottom: '2rem',
-        flexWrap: 'wrap'
-      }}>
-        {['all', 'completed', 'processing', 'failed'].map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilter(status)}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '6px',
-              border: filter === status ? '2px solid #3b82f6' : '1px solid #e5e7eb',
-              backgroundColor: filter === status ? '#eff6ff' : 'white',
-              color: filter === status ? '#3b82f6' : '#6b7280',
-              fontWeight: filter === status ? '600' : '400',
-              cursor: 'pointer',
-              textTransform: 'capitalize',
-              transition: 'all 0.2s'
-            }}
-          >
-            {status} {status !== 'all' && `(${jobs.filter(j => j.status === status).length})`}
-          </button>
-        ))}
-      </div>
-
-      {/* Loading State */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '4rem' }}>
-          <style>{`
-            @keyframes spin {
-              0% { transform: rotate(0deg); }
-              100% { transform: rotate(360deg); }
-            }
-          `}</style>
-          <div style={{
-            width: '48px',
-            height: '48px',
-            border: '4px solid #e5e7eb',
-            borderTop: '4px solid #3b82f6',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto'
-          }}></div>
-          <p style={{ color: '#6b7280', marginTop: '16px' }}>Loading jobs...</p>
-        </div>
-      ) : filteredJobs.length === 0 ? (
-        <div style={{
-          textAlign: 'center',
-          padding: '4rem',
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          border: '1px solid #e5e7eb'
-        }}>
-          <p style={{ fontSize: '1.125rem', color: '#374151', marginBottom: '8px' }}>
-            {filter === 'all' ? 'No jobs yet' : `No ${filter} jobs`}
-          </p>
-          <p style={{ color: '#6b7280', marginBottom: '1.5rem' }}>
-            {filter === 'all' ? 'Upload a log file to get started' : `Try selecting a different filter`}
-          </p>
-          {filter === 'all' && (
-            <button
-              className="btn btn-primary"
-              onClick={() => navigate('/upload')}
-            >
-              Upload Log File
-            </button>
-          )}
-        </div>
-      ) : (
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          border: '1px solid #e5e7eb',
-          overflow: 'hidden'
-        }}>
-          {/* Table Header */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: '2fr 1fr 1fr 1fr',
-            gap: '16px',
-            padding: '16px 24px',
-            backgroundColor: '#f9fafb',
-            borderBottom: '1px solid #e5e7eb',
-            fontWeight: '600',
-            fontSize: '0.875rem',
-            color: '#374151'
-          }}>
-            <div>FILE NAME</div>
-            <div>STATUS</div>
-            <div>CREATED</div>
-            <div>DURATION</div>
+      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 20px' }}>
+        {/* Header */}
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '10px',
+              backgroundColor: '#eff6ff',
+              color: '#2563eb',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <Icons.Activity />
+            </div>
+            <div>
+              <h1 style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontSize: '22px',
+                fontWeight: 700,
+                color: '#111827',
+              }}>
+                Recent Activity
+              </h1>
+              <p style={{ fontSize: '13px', color: '#6b7280' }}>
+                View all your log analysis jobs and their status
+              </p>
+            </div>
           </div>
+        </div>
 
-          {/* Job Rows */}
-          {filteredJobs.map((job) => {
-            const statusStyle = getStatusStyle(job.status);
-            const duration = formatDuration(job.created_at, job.completed_at);
+        {/* Filter Tabs */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '12px',
+          border: '1px solid #e5e7eb',
+          padding: '16px 20px',
+          marginBottom: '16px',
+        }}>
+          <div style={{
+            display: 'flex',
+            gap: '8px',
+            flexWrap: 'wrap',
+          }}>
+            {['all', 'completed', 'processing', 'failed'].map((status) => {
+              const count = status === 'all' ? jobs.length : jobs.filter(j => j.status === status).length;
+              const isActive = filter === status;
+              return (
+                <button
+                  key={status}
+                  onClick={() => setFilter(status)}
+                  style={{
+                    padding: '7px 14px',
+                    borderRadius: '6px',
+                    border: isActive ? '1px solid #2563eb' : '1px solid #e5e7eb',
+                    backgroundColor: isActive ? '#eff6ff' : 'white',
+                    color: isActive ? '#2563eb' : '#6b7280',
+                    fontSize: '13px',
+                    fontWeight: isActive ? 500 : 400,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    textTransform: 'capitalize',
+                  }}
+                >
+                  {status} ({count})
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-            return (
-              <div
-                key={job.job_id}
-                onClick={() => handleJobClick(job.job_id, job.status)}
+        {/* Loading State */}
+        {loading ? (
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            padding: '60px 20px',
+            textAlign: 'center',
+          }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              border: '3px solid #e5e7eb',
+              borderTop: '3px solid #2563eb',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 16px',
+            }} />
+            <p style={{ fontSize: '14px', color: '#6b7280' }}>Loading jobs...</p>
+          </div>
+        ) : filteredJobs.length === 0 ? (
+          /* Empty State */
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            padding: '60px 20px',
+            textAlign: 'center',
+          }}>
+            <div style={{ color: '#d1d5db', marginBottom: '16px' }}>
+              <Icons.Inbox />
+            </div>
+            <h3 style={{
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontSize: '16px',
+              fontWeight: 600,
+              color: '#111827',
+              marginBottom: '6px',
+            }}>
+              {filter === 'all' ? 'No jobs yet' : `No ${filter} jobs`}
+            </h3>
+            <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '20px' }}>
+              {filter === 'all' ? 'Upload a log file to get started with analysis' : 'Try selecting a different filter'}
+            </p>
+            {filter === 'all' && (
+              <button
+                onClick={() => navigate('/upload')}
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: '2fr 1fr 1fr 1fr',
-                  gap: '16px',
-                  padding: '16px 24px',
-                  borderBottom: '1px solid #e5e7eb',
-                  cursor: job.status === 'completed' ? 'pointer' : 'default',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '9px 16px',
+                  backgroundColor: '#2563eb',
+                  color: 'white',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
                   transition: 'background-color 0.2s',
-                  alignItems: 'center'
                 }}
-                onMouseEnter={(e) => {
-                  if (job.status === 'completed') {
-                    e.currentTarget.style.backgroundColor = '#9d9d9dff';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#1d4ed8'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
               >
-                {/* Filename */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '1.25rem' }}>📄</span>
-                  <div>
-                    <div style={{ fontWeight: '500', color: '#1f2937', marginBottom: '2px' }}>
-                      {job.filename}
+                <Icons.Upload />
+                Upload Log File
+              </button>
+            )}
+          </div>
+        ) : (
+          /* Jobs Table */
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            overflow: 'hidden',
+          }}>
+            {/* Table Header */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '2fr 1fr 1fr 1fr',
+              gap: '16px',
+              padding: '12px 20px',
+              backgroundColor: '#f9fafb',
+              borderBottom: '1px solid #e5e7eb',
+            }}>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                File Name
+              </div>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Status
+              </div>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Created
+              </div>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Duration
+              </div>
+            </div>
+
+            {/* Job Rows */}
+            {filteredJobs.map((job, index) => {
+              const statusStyle = getStatusStyle(job.status);
+              const duration = formatDuration(job.created_at, job.completed_at);
+              const isClickable = job.status === 'completed';
+
+              return (
+                <div
+                  key={job.job_id}
+                  onClick={() => handleJobClick(job.job_id, job.status)}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '2fr 1fr 1fr 1fr',
+                    gap: '16px',
+                    padding: '14px 20px',
+                    borderBottom: index < filteredJobs.length - 1 ? '1px solid #e5e7eb' : 'none',
+                    cursor: isClickable ? 'pointer' : 'default',
+                    transition: 'background-color 0.15s',
+                    alignItems: 'center',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (isClickable) {
+                      e.currentTarget.style.backgroundColor = '#f9fafb';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  {/* Filename */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '6px',
+                      backgroundColor: '#f3f4f6',
+                      color: '#6b7280',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}>
+                      <Icons.File />
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
-                      {formatRelativeTime(job.created_at)}
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: '#111827',
+                        marginBottom: '2px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {job.filename}
+                      </p>
+                      <p style={{ fontSize: '11px', color: '#9ca3af' }}>
+                        {formatRelativeTime(job.created_at)}
+                      </p>
                     </div>
                   </div>
-                </div>
 
-                {/* Status */}
-                <div>
-                  <span style={{
-                    fontSize: '0.75rem',
-                    padding: '4px 10px',
-                    borderRadius: '4px',
-                    backgroundColor: statusStyle.bg,
-                    color: statusStyle.color,
-                    fontWeight: '600',
-                    display: 'inline-block'
+                  {/* Status */}
+                  <div>
+                    <span style={{
+                      display: 'inline-block',
+                      padding: '4px 10px',
+                      fontSize: '11px',
+                      fontWeight: 500,
+                      borderRadius: '9999px',
+                      backgroundColor: statusStyle.bg,
+                      color: statusStyle.color,
+                      textTransform: 'capitalize',
+                    }}>
+                      {job.status}
+                    </span>
+                  </div>
+
+                  {/* Created Date */}
+                  <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                    {formatDate(job.created_at)}
+                  </div>
+
+                  {/* Duration */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
                   }}>
-                    {statusStyle.icon} {job.status.toUpperCase()}
-                  </span>
+                    <span style={{ fontSize: '12px', color: '#6b7280' }}>
+                      {duration || (job.status === 'completed' ? 'N/A' : '-')}
+                    </span>
+                    {isClickable && (
+                      <span style={{ color: '#2563eb' }}>
+                        <Icons.ArrowRight />
+                      </span>
+                    )}
+                  </div>
                 </div>
+              );
+            })}
+          </div>
+        )}
 
-                {/* Created Date */}
-                <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                  {formatDate(job.created_at)}
-                </div>
-
-                {/* Duration */}
-                <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                  {duration || (job.status === 'completed' ? 'N/A' : '-')}
-                </div>
-              </div>
-            );
-          })}
+        {/* Back Button */}
+        <div style={{ marginTop: '20px' }}>
+          <button
+            onClick={() => navigate('/dashboard')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '9px 14px',
+              backgroundColor: 'white',
+              color: '#374151',
+              fontSize: '13px',
+              fontWeight: 500,
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = '#f9fafb';
+              e.currentTarget.style.borderColor = '#9ca3af';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = 'white';
+              e.currentTarget.style.borderColor = '#d1d5db';
+            }}
+          >
+            <Icons.ArrowLeft />
+            Back to Dashboard
+          </button>
         </div>
-      )}
-
-      {/* Back Button */}
-      <div style={{ marginTop: '2rem' }}>
-        <button
-          onClick={() => navigate('/dashboard')}
-          style={{
-            padding: '10px 20px',
-            backgroundColor: '#6b7280',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          ← Back to Dashboard
-        </button>
       </div>
     </div>
   );
