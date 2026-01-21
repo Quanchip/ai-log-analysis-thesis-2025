@@ -2,6 +2,7 @@ from multiprocessing.pool import AsyncResult
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from typing import List
 import asyncio
 import json
 
@@ -10,10 +11,45 @@ from ..celery import celery
 from ..database import get_db
 from ..auth.dependencies import CurrentUser
 from ..jobs.models import ProcessingJob, JobStatus
+from ..jobs.schemas import RecentJobResponse
+from ..jobs.service import get_recent_jobs
 from ..logs.models import LogFile
 from ..ml.models import AnalysisResult
 
 router = APIRouter(prefix="/api/jobs", tags=["Jobs"])
+
+
+@router.get("/recent", response_model=List[RecentJobResponse])
+async def get_user_recent_jobs(
+    current_user: CurrentUser,
+    db: Session = Depends(get_db),
+    limit: int = 10
+):
+    """
+    Get user's recent processing jobs
+
+    Args:
+        limit: Maximum number of jobs to return (default 10, max 50)
+
+    Returns:
+        List of recent jobs with filename, status, and timestamps
+    """
+    # Limit maximum to 50
+    limit = min(limit, 50)
+
+    result = get_recent_jobs(
+        user_id=current_user["id"],
+        limit=limit,
+        db=db
+    )
+
+    if result["error"]:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=result["message"]
+        )
+
+    return result["data"]
 
 
 @router.get("/{job_id}/stream")
@@ -102,7 +138,7 @@ async def get_job_status(
             "message": "Parsing log file..."
         }
     """
-    # Expire all cached data to ensure fresh query
+
     db.expire_all()
 
     job = db.query(ProcessingJob).filter(
@@ -116,52 +152,6 @@ async def get_job_status(
             detail="Job not found"
         )
 
-
-    # if job.celery_task_id:
-    #     task = AsyncResult(job.celery_task_id, app=celery)
-        
-    #     # Check Celery task state
-    #     if task.state == 'PROGRESS':
-    #         # Get progress from Celery task metadata
-    #         task_progress = task.info.get('progress', 0) if task.info else 0
-    #         task_message = task.info.get('message', 'Processing...') if task.info else 'Processing...'
-            
-    #         # Map Celery progress (0-100) to our range (30-100)
-    #         mapped_progress = 30 + int((task_progress * 70) / 100)
-            
-    #         return {
-    #             "job_id": job.id,
-    #             "status": "PROCESSING",
-    #             "progress": mapped_progress,
-    #             "message": task_message
-    #         }
-    #     elif task.state == 'SUCCESS':
-    #         # Update job status if not already done
-    #         if job.status != JobStatus.COMPLETED:
-    #             job.status = JobStatus.COMPLETED
-    #             db.commit()
-            
-    #         return {
-    #             "job_id": job.id,
-    #             "status": "COMPLETED",
-    #             "progress": 100,
-    #             "message": "Analysis complete!"
-    #         }
-    #     elif task.state == 'FAILURE':
-    #         # Update job status if not already done
-    #         if job.status != JobStatus.FAILED:
-    #             job.status = JobStatus.FAILED
-    #             db.commit()
-            
-    #         return {
-    #             "job_id": job.id,
-    #             "status": "FAILED",
-    #             "progress": 0,
-    #             "message": str(task.info) if task.info else "Processing failed"
-    #         }    
-
-    # Calculate progress based on status
-    # Upload is 0-30%, so processing starts at 30%
     progress_map = {
         JobStatus.PENDING: 30,
         JobStatus.QUEUED: 35,
@@ -197,7 +187,7 @@ async def get_job_results(
     """
     Get ML analysis results for completed job
 
-    Returns analysis statistics and anomaly logs
+    Returns analysis statistics and anomaly session summaries
     """
     # Verify job belongs to user
     job = db.query(ProcessingJob).filter(
@@ -239,5 +229,89 @@ async def get_job_results(
         "normal_count": analysis.normal_count,
         "anomaly_percentage": analysis.anomaly_percentage,
         "predictions": analysis.predictions,  # Array of predictions (0=normal, 1=anomaly)
+        "anomaly_logs": analysis.anomaly_logs,  # Session summaries with log counts
         "created_at": analysis.created_at.isoformat()
+    }
+
+
+@router.get("/{job_id}/session/{block_id}")
+async def get_session_details(
+    job_id: str,
+    block_id: str,
+    current_user: CurrentUser,
+    db: Session = Depends(get_db)
+):
+    """
+    Get all logs for a specific session (BlockId)
+
+    Args:
+        job_id: The processing job ID
+        block_id: The BlockId of the session to retrieve
+
+    Returns:
+        All log entries for the specified session
+    """
+    from ..storage.minio_client import minio_client
+    import pandas as pd
+    import io
+
+    # Verify job belongs to user
+    job = db.query(ProcessingJob).filter(
+        ProcessingJob.id == job_id,
+        ProcessingJob.user_id == current_user["id"]
+    ).first()
+
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Job not found"
+        )
+
+    if not job.result_file_path:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Processed CSV not found"
+        )
+
+    # Download CSV from MinIO
+    csv_data = minio_client.get_object(
+        bucket_name="processed-logs",
+        object_name=job.result_file_path
+    )
+
+    # Read CSV data
+    csv_bytes = csv_data.read()
+    df = pd.read_csv(io.BytesIO(csv_bytes))
+
+    # Recreate sessions the same way loglizer does (extract BlockId from Content)
+    import re
+    from collections import OrderedDict
+
+    data_dict = OrderedDict()
+
+    for idx, row in df.iterrows():
+        # Extract BlockIds from content using same regex as loglizer
+        blkId_list = re.findall(r'(blk_-?\d+)', str(row.get('Content', '')))
+        blkId_set = set(blkId_list)
+
+        for blk_Id in blkId_set:
+            if blk_Id not in data_dict:
+                data_dict[blk_Id] = []
+            data_dict[blk_Id].append(idx)  # Store row indices
+
+    # Find the requested session
+    if block_id not in data_dict:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session {block_id} not found"
+        )
+
+    # Get all logs in this session
+    log_indices = data_dict[block_id]
+    session_logs = df.iloc[log_indices]
+
+    return {
+        "block_id": block_id,
+        "log_count": len(session_logs),
+        "logs": session_logs.to_dict('records')
     }

@@ -1,0 +1,69 @@
+@startuml Analysis_Sequence_Diagram
+
+title View Anomaly Analysis Flow
+
+skinparam defaultFontName Arial
+skinparam sequenceMessageAlign center
+
+actor User
+participant "Dashboard Component" as Dashboard
+participant "API Service" as API
+participant "FastAPI Backend" as Backend
+participant "LLM Service" as LLM
+participant "MinIO Storage" as MinIO
+database "Database" as DB
+participant "Groq API\n(LLaMA 3.3)" as Groq
+
+User -> Dashboard: Click "View Analysis"\non completed job
+activate Dashboard
+
+Dashboard -> API: GET /api/jobs/{job_id}/analysis\n(with Bearer token)
+activate API
+
+API -> Backend: Get anomaly analysis
+activate Backend
+
+Backend -> Backend: Validate user owns job
+
+Backend -> DB: Get ProcessingJob\nand result_file_path
+activate DB
+DB --> Backend: {job_id, result_file_path, user_id}
+deactivate DB
+
+Backend -> MinIO: Download processed CSV\nfrom result_file_path
+activate MinIO
+MinIO --> Backend: CSV data with predictions
+deactivate MinIO
+
+Backend -> Backend: Filter anomalies\n(prediction == 1)
+
+loop For each anomaly (or sample)
+    Backend -> LLM: analyze_anomaly_with_context(\nlog_entry, block_id, event_id, job_id)
+    activate LLM
+
+    LLM -> MinIO: Fetch session context\n(logs with same BlockId)
+    activate MinIO
+    MinIO --> LLM: Session logs
+    deactivate MinIO
+
+    LLM -> LLM: Build prompt with\nlog entry + session context
+
+    LLM -> Groq: POST /chat/completions\nmodel: llama-3.3-70b-versatile
+    activate Groq
+    Groq --> LLM: {explanation, root_causes,\nseverity, recommended_actions}
+    deactivate Groq
+
+    LLM --> Backend: Analysis result
+    deactivate LLM
+end
+
+Backend --> API: {\n  anomaly_count,\n  anomaly_percentage,\n  anomalies: [{log, llm_analysis}]\n}
+deactivate Backend
+
+API --> Dashboard: Analysis data
+deactivate API
+
+Dashboard --> User: Display:\n• Anomaly statistics\n• LLM explanations\n• Recommendations\n• Session context
+deactivate Dashboard
+
+@enduml

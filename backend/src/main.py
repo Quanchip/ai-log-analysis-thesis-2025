@@ -10,6 +10,7 @@ from .database import engine
 from .auth import router as auth_router
 from .logs import router as logs_router
 from .jobs import router as jobs_router
+from .llm import router as llm_router
 from src.database import Base
 
 from .celery.celery import create_task
@@ -29,14 +30,6 @@ app.add_middleware(
 app.include_router(auth_router.router)
 app.include_router(logs_router.router)
 app.include_router(jobs_router.router)
+app.include_router(llm_router.router)
 
-
-# Import models to register them with Base before create_all
-# Just importing the modules triggers class registration
-# _ = auth_models.Users  # noqa
-# _ = logs_model.LogFile  # noqa
-# _ = jobs_model.ProcessingJob  # noqa
-# _ = ml_model.AnalysisResult  # noqa
-
-# Now create all tables (all models are registered)
 Base.metadata.create_all(engine)

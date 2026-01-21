@@ -70,6 +70,36 @@ export const authAPI = {
     const response = await api.get('/auth/users');
     return response.data;
   },
+
+  // Change password
+  changePassword: async (passwordData) => {
+    const response = await api.put('/auth/change-password', passwordData);
+    return response.data;
+  },
 };
+
+// Jobs API calls
+export const jobsAPI = {
+  // Get recent jobs for current user
+  getRecentJobs: async (limit = 10) => {
+    const response = await api.get(`/api/jobs/recent?limit=${limit}`);
+    return response.data;
+  },
+
+  // Get job status
+  getJobStatus: async (jobId) => {
+    const response = await api.get(`/api/jobs/${jobId}/status`);
+    return response.data;
+  },
+
+  // Get job results
+  getJobResults: async (jobId) => {
+    const response = await api.get(`/api/jobs/${jobId}/results`);
+    return response.data;
+  },
+};
+
+// Named exports for convenience
+export const { changePassword } = authAPI;
 
 export default api;

@@ -58,3 +58,5 @@ build/
 # OS-specific
 # -----------------
 .DS_Store
+
+.vscode/

@@ -24,6 +24,7 @@ class AnalysisResult(Base):
     anomaly_percentage = Column(Float, nullable=False)  # Percentage of anomalies
 
     predictions = Column(JSON, nullable=True)
+    anomaly_logs = Column(JSON, nullable=True)  # Stores actual anomaly log entries
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     log_file = relationship("LogFile", backref="analysis_results")
 

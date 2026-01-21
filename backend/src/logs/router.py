@@ -19,14 +19,13 @@ async def upload_log_file(current_user: CurrentUser,
                           db: Session = Depends(get_db)):
     
     log_service = LogService(db)
-    allowed_extensions = [".log", ".csv", ".png", ".txt"]
+    allowed_extensions = [".log"]
     file_extension = os.path.splitext(file.filename)[1].lower()
 
     if file_extension not in allowed_extensions:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail=f"File type not allowed.")
     
-
     result = log_service.save_log_file(file, current_user["id"])
 
     if result["error"]:

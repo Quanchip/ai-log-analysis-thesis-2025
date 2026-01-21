@@ -20,7 +20,6 @@ import pandas as pd
 load_dotenv("../../.env")
 
 celery = Celery(__name__)
-
 celery.conf.broker_url = os.environ.get("CELERY_BROKER_URL")
 celery.conf.result_backend = os.environ.get("CELERY_RESULT_BACKEND")
 
@@ -87,7 +86,7 @@ def create_task(self, job_id: str):
         # Parse log with HDFS format (or auto-detect)
         parse_result = parse_log_content(
             log_content=log_content,
-            log_format_name="hdfs",  # Specify format for HDFS logs
+            log_format_name="hdfs",
             st=0.5,
             depth=4
         )
@@ -143,6 +142,7 @@ def create_task(self, job_id: str):
         # Update job status to FAILED
         if job:
             job.status = JobStatus.FAILED
+            job.completed_at = datetime.datetime.utcnow()
             db.commit()
 
         raise  # Re-raise to let Celery handle retry logic
@@ -200,13 +200,95 @@ def ml_analysis_task(self, job_id: str):
 
             print(f"[ML Task] ✓ ML prediction completed: {result['anomaly_count']} anomalies found")
 
+            # Step 4: Extract anomaly sessions with statistics
+            # Note: ML predicts on sessions, not individual log lines
+            print(f"[ML Task] Extracting anomaly sessions...")
+
+            # Get anomaly indices (sessions that are anomalies)
+            anomaly_indices = [i for i, pred in enumerate(result["predictions"]) if pred == 1]
+
+            # Read the CSV to get session information
+            df = pd.read_csv(temp_csv.name)
+
+            # Recreate sessions the same way loglizer does (extract BlockId from Content)
+            import re
+            from collections import OrderedDict
+
+            data_dict = OrderedDict()
+            row_to_session = {}  # Map row index to BlockId
+
+            for idx, row in df.iterrows():
+                # Extract BlockIds from content using same regex as loglizer
+                blkId_list = re.findall(r'(blk_-?\d+)', str(row.get('Content', '')))
+                blkId_set = set(blkId_list)
+
+                for blk_Id in blkId_set:
+                    if blk_Id not in data_dict:
+                        data_dict[blk_Id] = []
+                    data_dict[blk_Id].append(idx)  # Store row indices
+                    row_to_session[idx] = blk_Id  # Map this row to its session
+
+            # Build session summaries for anomalies
+            session_list = list(data_dict.keys())
+            anomaly_logs = []
+
+            print(f"[ML Task] Total sessions found: {len(session_list)}")
+            print(f"[ML Task] Total anomaly predictions: {len(anomaly_indices)}")
+            print(f"[ML Task] Anomaly session indices: {anomaly_indices[:10] if len(anomaly_indices) > 0 else 'None'}")
+
+            # Check if we found any sessions
+            if len(session_list) == 0:
+                print(f"[ML Task] ⚠ WARNING: No BlockIds found in log content!")
+                print(f"[ML Task] ⚠ The log file may not be HDFS format or BlockIds are not in content")
+                print(f"[ML Task] ⚠ Cannot create session summaries - anomaly_logs will be empty")
+                # Still continue - will create empty anomaly_logs array
+            else:
+                for session_idx in anomaly_indices[:1000]:  # Limit to 1000 anomalies
+                    if session_idx < len(session_list):
+                        block_id = session_list[session_idx]
+                        log_indices = data_dict[block_id]
+
+                        # Get all logs in this session
+                        session_logs = df.iloc[log_indices]
+
+                        if len(session_logs) > 0:
+                            # Get first and last log for time range
+                            first_log = session_logs.iloc[0]
+                            last_log = session_logs.iloc[-1]
+
+                            # Count event types in this session
+                            event_distribution = session_logs['EventId'].value_counts().to_dict() if 'EventId' in session_logs.columns else {}
+
+                            # Create session summary - ensure all values are JSON serializable
+                            session_summary = {
+                                'BlockId': str(block_id),  # Ensure string
+                                'log_count': int(len(session_logs)),  # Ensure int
+                                'first_timestamp': f"{first_log.get('Date', '')} {first_log.get('Time', '')}".strip(),
+                                'last_timestamp': f"{last_log.get('Date', '')} {last_log.get('Time', '')}".strip(),
+                                'unique_events': int(len(session_logs['EventId'].unique())) if 'EventId' in session_logs.columns else 0,
+                                'event_distribution': {str(k): int(v) for k, v in event_distribution.items()},
+                                # Include first log content as preview
+                                'preview_content': str(first_log.get('Content', '')),
+                                'preview_level': str(first_log.get('Level', '')),
+                            }
+                            anomaly_logs.append(session_summary)
+                    else:
+                        print(f"[ML Task] Warning: Anomaly index {session_idx} >= session count {len(session_list)}")
+
+            print(f"[ML Task] ✓ Extracted {len(anomaly_logs)} anomaly session summaries")
+            if len(anomaly_logs) > 0:
+                print(f"[ML Task] Sample BlockId: {anomaly_logs[0]['BlockId']}")
+            else:
+                print(f"[ML Task] ⚠ No anomaly session summaries created!")
+
             analysis_result = AnalysisResult(
                 log_file_id=job.file_id,
                 total_logs=result["total_logs"],
                 anomaly_count=result["anomaly_count"],
                 normal_count=result["normal_count"],
                 anomaly_percentage=result["anomaly_percentage"],
-                predictions=result["predictions"]
+                predictions=result["predictions"],
+                anomaly_logs=anomaly_logs  # Store actual log entries
             )
 
             db.add(analysis_result)
@@ -216,6 +298,7 @@ def ml_analysis_task(self, job_id: str):
             print(f"[ML Task] ✓ Analysis result saved with ID {analysis_result.id}")
 
             job.status = JobStatus.COMPLETED
+            job.completed_at = datetime.datetime.utcnow()
             db.commit()
 
             print(f"[ML Task] ✓ Job {job_id} marked as COMPLETED")
@@ -241,6 +324,10 @@ def ml_analysis_task(self, job_id: str):
         # Update job with error
         if job:
             job.status = JobStatus.FAILED
+            job.completed_at = datetime.datetime.utcnow()
             db.commit()
 
         raise
+
+
+

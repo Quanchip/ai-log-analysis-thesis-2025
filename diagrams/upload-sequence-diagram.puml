@@ -1,0 +1,91 @@
+@startuml Upload_Sequence_Diagram
+
+title Log File Upload Flow
+
+skinparam defaultFontName Arial
+skinparam sequenceMessageAlign center
+
+actor User
+participant "Upload Component" as Upload
+participant "API Service" as API
+participant "FastAPI Backend" as Backend
+participant "MinIO Storage" as MinIO
+database "Database" as DB
+participant "Redis Queue" as Redis
+participant "Celery Worker" as Worker
+
+User -> Upload: Select .log file\nClick "Upload"
+activate Upload
+
+Upload -> API: POST /api/logs/upload\n(file, with Bearer token)
+activate API
+
+API -> Backend: Upload file
+activate Backend
+
+Backend -> Backend: Validate file\n(.log extension, size limit)
+
+Backend -> MinIO: Upload to raw-logs bucket\nlogs/{user_id}/{timestamp}_{uuid}_{filename}
+activate MinIO
+MinIO --> Backend: Upload success
+deactivate MinIO
+
+Backend -> DB: Create LogFile record\n{filename, minio_path, user_id}
+activate DB
+DB --> Backend: LogFile created (file_id)
+deactivate DB
+
+Backend -> DB: Create ProcessingJob\n{job_id, file_id, status: QUEUED}
+activate DB
+DB --> Backend: Job created
+deactivate DB
+
+Backend -> Redis: Queue Celery task\ncreate_task.delay(job_id)
+activate Redis
+Redis --> Backend: Task queued (celery_task_id)
+deactivate Redis
+
+Backend -> DB: Update job.celery_task_id
+activate DB
+DB --> Backend: Updated
+deactivate DB
+
+Backend --> API: {job_id, status: "queued"}
+deactivate Backend
+
+API --> Upload: Job created successfully
+deactivate API
+
+Upload --> User: Show success\nDisplay job_id
+deactivate Upload
+
+== Asynchronous Processing ==
+
+Redis -> Worker: Dequeue task
+activate Worker
+
+Worker -> DB: Update job status: PROCESSING
+activate DB
+DB --> Worker: Updated
+deactivate DB
+
+Worker -> MinIO: Download log file
+activate MinIO
+MinIO --> Worker: File content
+deactivate MinIO
+
+Worker -> Worker: Parse log (Drain algorithm)\nDetect anomalies (ML model)\nGenerate LLM analysis
+
+Worker -> MinIO: Upload results to processed-logs\n{filename}_structured.csv
+activate MinIO
+MinIO --> Worker: Upload success
+deactivate MinIO
+
+Worker -> DB: Update job\nstatus: COMPLETED\nresult_file_path: {path}
+activate DB
+DB --> Worker: Updated
+deactivate DB
+
+deactivate Worker
+
+@enduml

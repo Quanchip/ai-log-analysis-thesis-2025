@@ -10,6 +10,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import AdminDashboard from './admin/components/AdminDashboard';
 import LogUpload from './components/LogUpload';
 import Results from './components/Results';
+import RecentActivity from './components/RecentActivity';
+import Settings from './components/Settings';
 
 
 function UserLayout() {
@@ -62,6 +64,22 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <Results />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/activity"
+                element={
+                  <ProtectedRoute>
+                    <RecentActivity />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <Settings />
                   </ProtectedRoute>
                 }
               />

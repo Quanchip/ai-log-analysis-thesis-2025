@@ -49,12 +49,12 @@ class UserService:
         user = self.authenticate_user(form_data.username, form_data.password)
         if not user:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Validation failed')
-        token = self.create_access_token(user.username, user.id, user.role.value, timedelta(minutes=120))
+        token = self.create_access_token(user.username, user.id, user.email, user.role.value, timedelta(minutes=120))
 
         return {'access_token': token, 'token_type': 'bearer'}
     
-    def create_access_token(self, username: str, user_id: int, role: str, expires_delta: timedelta):
-        encode = {'sub': username, 'id': user_id, 'role': role}
+    def create_access_token(self, username: str, user_id: int, email: str, role: str, expires_delta: timedelta):
+        encode = {'sub': username, 'id': user_id, 'email': email, 'role': role}
         expires = datetime.now(timezone.utc) + expires_delta
         encode.update({'exp': expires})
         return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -78,6 +78,7 @@ class UserService:
 
             username: str = payload.get('sub')
             user_id: int = payload.get('id')
+            email: str = payload.get('email')
             role: str = payload.get('role')
 
             if username is None or user_id is None:
@@ -85,10 +86,39 @@ class UserService:
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Could not validate user"
                 )
-            return {'username': username, 'id': user_id, 'role': role}
+            return {'username': username, 'id': user_id, 'email': email, 'role': role}
         except JWTError:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
                                 detail='Could not validate user')
 
+    def change_password(self, user_id: int, password_data: schemas.PasswordChange) -> Dict:
+        """Change user password"""
+        user = self.db.query(models.Users).filter(models.Users.id == user_id).first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        # Verify current password
+        if not bcrypt_context.verify(password_data.current_password, user.password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect"
+            )
+
+        # Validate new password length
+        if len(password_data.new_password) < 6:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="New password must be at least 6 characters"
+            )
+
+        # Update password
+        user.password = bcrypt_context.hash(password_data.new_password)
+        self.db.commit()
+
+        return {"message": "Password changed successfully"}
 
 
