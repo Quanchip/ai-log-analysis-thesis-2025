@@ -60,3 +60,13 @@ build/
 .DS_Store
 
 .vscode/
+
+.venv-1/
+
+backend/src/__pycache__/
+
+frontend/node_modules/
+
+backend/src/third_party/logparser/data/loghub_2k/.DS_Store
+
+.claude/
