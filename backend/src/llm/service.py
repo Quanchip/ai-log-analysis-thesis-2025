@@ -138,9 +138,13 @@ class LLMService:
         """
         Fetch all logs in the same session (same BlockId).
 
+        NOTE: BlockId is extracted from the Content field using regex,
+        not from a separate BlockId column. This matches how loglizer
+        groups logs into sessions.
+
         Args:
             job_id: The processing job ID
-            block_id: The session identifier
+            block_id: The session identifier (e.g., blk_-1608999687919862906)
 
         Returns:
             List of log entries in chronological order
@@ -148,7 +152,9 @@ class LLMService:
         from ..jobs.models import ProcessingJob
         from ..storage.minio_client import minio_client
         import pandas as pd
-        import tempfile
+        import io
+        import re
+        from collections import OrderedDict
 
         try:
             # Get job and CSV file path
@@ -157,7 +163,10 @@ class LLMService:
             ).first()
 
             if not job or not job.result_file_path:
+                print(f"[LLM] No job or result_file_path found for job_id: {job_id}")
                 return []
+
+            print(f"[LLM] Fetching session context from: {job.result_file_path}")
 
             # Download CSV from MinIO
             csv_data = minio_client.get_object(
@@ -165,36 +174,57 @@ class LLMService:
                 object_name=job.result_file_path
             )
 
-            # Read CSV
-            temp_csv = tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.csv')
-            try:
-                for chunk in csv_data.stream(32*1024):
-                    temp_csv.write(chunk)
-                temp_csv.close()
+            # Read CSV into DataFrame
+            csv_bytes = csv_data.read()
+            df = pd.read_csv(io.BytesIO(csv_bytes))
 
-                df = pd.read_csv(temp_csv.name)
+            print(f"[LLM] Loaded CSV with {len(df)} rows, columns: {list(df.columns)}")
 
-                # Filter for this session
-                if 'BlockId' in df.columns:
-                    session_logs = df[df['BlockId'] == block_id]
+            # Build session mapping by extracting BlockId from Content
+            # This matches exactly how loglizer groups logs into sessions
+            data_dict = OrderedDict()
 
-                    # Sort by LineId if available
-                    if 'LineId' in session_logs.columns:
-                        session_logs = session_logs.sort_values('LineId')
+            for idx, row in df.iterrows():
+                # Extract BlockIds from content using same regex as loglizer
+                content = str(row.get('Content', ''))
+                blkId_list = re.findall(r'(blk_-?\d+)', content)
+                blkId_set = set(blkId_list)
 
-                    # Convert to list of dicts (limit to 20 for context)
-                    context = session_logs.head(20).to_dict('records')
-                    return context
-                else:
-                    return []
+                for blk_Id in blkId_set:
+                    if blk_Id not in data_dict:
+                        data_dict[blk_Id] = []
+                    data_dict[blk_Id].append(idx)  # Store row indices
 
-            finally:
-                import os
-                if os.path.exists(temp_csv.name):
-                    os.unlink(temp_csv.name)
+            print(f"[LLM] Found {len(data_dict)} unique sessions")
+
+            # Check if requested block_id exists
+            if block_id not in data_dict:
+                print(f"[LLM] Session {block_id} not found in data")
+                # Try partial match
+                matching_blocks = [b for b in data_dict.keys() if block_id in b or b in block_id]
+                if matching_blocks:
+                    print(f"[LLM] Similar blocks found: {matching_blocks[:5]}")
+                return []
+
+            # Get all logs in this session
+            log_indices = data_dict[block_id]
+            session_logs = df.iloc[log_indices]
+
+            # Sort by LineId if available
+            if 'LineId' in session_logs.columns:
+                session_logs = session_logs.sort_values('LineId')
+
+            # Convert to list of dicts (limit to 30 for context - enough for good analysis)
+            context = session_logs.head(30).to_dict('records')
+
+            print(f"[LLM] Retrieved {len(context)} logs for session {block_id}")
+
+            return context
 
         except Exception as e:
-            print(f"Error fetching session context: {e}")
+            print(f"[LLM] Error fetching session context: {e}")
+            import traceback
+            traceback.print_exc()
             return []
 
     def _build_prompt_with_context(
@@ -206,49 +236,71 @@ class LLMService:
     ) -> str:
         """Build enhanced prompt with session context."""
 
-        prompt = f"""Analyze this HDFS anomaly log entry WITH its session context.
+        # Build basic session info
+        session_info = f"Block ID: {block_id}" if block_id else "Unknown session"
 
-TARGET ANOMALY LOG:
-- Timestamp: {log_entry.get('Date', 'N/A')} {log_entry.get('Time', 'N/A')}
-- Level: {log_entry.get('Level', 'N/A')}
-- Content: {log_entry.get('Content', 'N/A')}
-- Event ID: {event_id or 'N/A'}
+        prompt = f"""You are analyzing an HDFS (Hadoop Distributed File System) log session that was flagged as ANOMALOUS by our ML model.
 
-This specific log was FLAGGED AS ANOMALY by our ML model.
+HDFS BACKGROUND:
+- HDFS manages data blocks across a distributed cluster
+- Each block (blk_*) represents a unit of data being stored/transferred
+- Normal operations include: block allocation, replication, packet transfers, block reports
+- Anomalies often indicate: replication failures, network issues, disk problems, or configuration errors
+
+SESSION INFORMATION:
+- {session_info}
 """
 
         # Add session context if available
         if session_context and len(session_context) > 0:
             prompt += f"""
-SESSION CONTEXT ({len(session_context)} logs in session {block_id}):
-Below are OTHER logs in the same session/transaction. Use this to understand the full story:
+FULL SESSION LOGS ({len(session_context)} log entries in chronological order):
+These logs show the complete sequence of events for this block operation:
 
 """
             for idx, log in enumerate(session_context, 1):
                 content = log.get('Content', 'N/A')
                 level = log.get('Level', 'INFO')
-                # Truncate long content
-                if len(content) > 150:
-                    content = content[:150] + "..."
+                date = log.get('Date', '')
+                time = log.get('Time', '')
+                timestamp = f"{date} {time}".strip() or "N/A"
 
-                prompt += f"{idx}. [{level}] {content}\n"
+                # Show full content for better analysis
+                prompt += f"{idx}. [{timestamp}] [{level}] {content}\n"
 
-            prompt += "\n"
+            prompt += """
+
+ANALYSIS TASK:
+Based on the ENTIRE session above, analyze why this session is anomalous.
+Look at the sequence of events to understand what went wrong.
+"""
+        else:
+            # No session context available - use the single log entry
+            prompt += f"""
+SINGLE LOG ENTRY (no session context available):
+- Timestamp: {log_entry.get('Date', 'N/A')} {log_entry.get('Time', 'N/A')}
+- Level: {log_entry.get('Level', 'N/A')}
+- Content: {log_entry.get('Content', 'N/A')}
+- Event ID: {event_id or 'N/A'}
+
+NOTE: Session context could not be retrieved. Analyze based on this single log entry.
+"""
 
         prompt += """
-Provide comprehensive analysis in JSON format:
+Provide your analysis in JSON format (no markdown, just raw JSON):
 {
-  "explanation": "Explain why this specific log is anomaly, considering the session context if available (3-4 sentences)",
-  "root_causes": ["Specific cause 1", "Specific cause 2", "Specific cause 3"],
+  "explanation": "3-4 sentences explaining why this session/log is anomalous. Describe what went wrong based on the log sequence.",
+  "root_causes": ["Primary cause", "Secondary cause", "Contributing factor"],
   "severity": "HIGH or MEDIUM or LOW",
   "recommended_actions": ["Specific action 1", "Specific action 2", "Specific action 3"]
 }
 
-Analysis guidelines:
-1. If session context is available, explain HOW this log fits into the sequence of events
-2. Identify the ROOT CAUSE from the session timeline
-3. Provide SPECIFIC actions based on what you see in the logs
-4. Consider temporal patterns (what happened before/after)
+SEVERITY GUIDELINES:
+- HIGH: Data loss risk, block corruption, replication failures, or service unavailability
+- MEDIUM: Performance issues, delayed operations, or recoverable errors
+- LOW: Minor issues, warnings that don't affect data integrity
+
+Be specific and technical in your analysis. Reference actual content from the logs when explaining causes.
 """
 
         return prompt
