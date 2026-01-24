@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import resultsImage from '../assets/results.png';
+import resultsImage from '../assets/result-llm.png';
 
 // Compact SVG icons
 const Icons = {
