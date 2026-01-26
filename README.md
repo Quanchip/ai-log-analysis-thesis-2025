@@ -1,4 +1,4 @@
-# AI Log Analysis For Thesis 2025
+# AI Log Analysis System for thesis 2025
 
 An advanced log analysis system leveraging artificial intelligence techniques for automated log parsing, anomaly detection, and intelligent monitoring.
 
@@ -6,109 +6,83 @@ An advanced log analysis system leveraging artificial intelligence techniques fo
 
 This thesis project focuses on developing AI-powered solutions for log analysis, combining automated log parsing with intelligent anomaly detection. The system is designed to handle large-scale log data from various sources and provide actionable insights for system monitoring and troubleshooting.
 
+## Tech Stack
+
+- **Frontend**: React + TypeScript
+- **Backend**: FastAPI (Python)
+- **Database**: PostgreSQL
+- **Storage**: MinIO (S3-compatible object storage)
+- **Task Queue**: Celery + Redis
+- **Containerization**: Docker & Docker Compose
+
 ## Project Structure
 
 ```
 ai-log-analysis-thesis-2025/
-├── loglizer/          # AI-powered log analysis and anomaly detection
-├── logparser/         # Automated log parsing and template extraction
+├── backend/           # FastAPI backend application
+├── frontend/          # React frontend application
+├── docker-utils/      # Docker configuration and utilities
+├── diagrams/          # Project documentation diagrams
 └── README.md          # This file
 ```
-
-## Components
-
-### LogParser
-- **Purpose**: Automated log parsing and template extraction
-- **Features**: 
-  - Intelligent log message parsing
-  - Template discovery and extraction
-  - Support for various log formats
-  - Pattern recognition algorithms
-
-### LogLizer
-- **Purpose**: AI-powered log analysis and anomaly detection
-- **Features**:
-  - Machine learning-based anomaly detection
-  - Real-time log monitoring
-  - Statistical analysis of log patterns
-  - Alert generation and notification system
-
-## Key Features
-
-- 🤖 **AI-Powered Analysis**: Advanced machine learning algorithms for log pattern recognition
-- 📊 **Real-time Processing**: Continuous log monitoring and analysis
-- 🔍 **Anomaly Detection**: Intelligent identification of unusual system behaviors
-- 📝 **Template Extraction**: Automated discovery of log message templates
-- 🚨 **Alert System**: Configurable alerting for critical events
-- 📈 **Visualization**: Comprehensive dashboards and reporting
-
-## Research Focus
-
-This thesis explores:
-
-1. **Automated Log Parsing**: Developing robust algorithms for extracting structured information from unstructured log data
-2. **AI-Driven Anomaly Detection**: Implementing machine learning models to identify abnormal patterns in system logs
-3. **Scalable Architecture**: Designing systems capable of handling large-scale enterprise log volumes
-4. **Real-world Applications**: Validating approaches on real enterprise log datasets
 
 ## Getting Started
 
 ### Prerequisites
 
-- Python 3.8+
-- Required dependencies (see requirements.txt in each component)
+- Docker and Docker Compose
 - Sufficient disk space for log data processing
 
-### Installation
+### Quick Start with Docker
 
-```bash
-# Clone the repository
-git clone https://github.com/username/ai-log-analysis-thesis-2025.git
-cd ai-log-analysis-thesis-2025
+The easiest way to run the entire system is using Docker Compose.
 
-# Install components
-# (Detailed installation instructions will be added as components are developed)
-```
+1. Navigate to the docker utilities directory:
+   ```bash
+   cd docker-utils/
+   ```
 
-## Usage
+2. Start all services:
+   ```bash
+   docker-compose up -d
+   ```
 
-Detailed usage instructions will be provided as the components are implemented.
+3. Access the services:
+   
+   | Service | URL | Credentials (if applicable) |
+   |---------|-----|-----------------------------|
+   | **Frontend** | http://localhost:3002 | - |
+   | **Backend API** | http://localhost:8000 | - |
+   | **API Docs** | http://localhost:8000/docs | - |
+   | **MinIO Console** | http://localhost:9001 | admin / admin123 |
+   | **PgAdmin** | http://localhost:8088 | admin@admin.com / admin |
+   | **Flower** | http://localhost:5555 | - |
 
-## Research Methodology
+### Running Locally (Development)
 
-1. **Literature Review**: Comprehensive analysis of existing log analysis techniques
-2. **Algorithm Development**: Design and implementation of novel AI-based approaches
-3. **Experimental Validation**: Testing on benchmark datasets and real-world scenarios
-4. **Performance Evaluation**: Metrics-based assessment of accuracy and efficiency
+Detailed development instructions can be found in `CLAUDE.md`.
 
-## Expected Outcomes
+## Architecture Overview
 
-- Novel algorithms for automated log parsing
-- Improved anomaly detection accuracy compared to traditional methods
-- Scalable system architecture for enterprise deployment
-- Comprehensive evaluation framework for log analysis systems
+The system follows a client-server architecture:
 
-## Timeline
+- **Client Layer**: A React Single Page Application (SPA) serving as the user dashboard.
+- **API Layer**: FastAPI backend handling REST API requests, authentication, and orchestration.
+- **Data Layer**: PostgreSQL for structured data (users, metadata), MinIO for object storage (log files), and Redis for caching/queueing.
+- **Worker Layer**: Celery workers for asynchronous tasks like heavy log parsing and ML processing.
 
-- **Phase 1**: Literature review and algorithm design
-- **Phase 2**: Implementation of core components
-- **Phase 3**: Experimental validation and evaluation
-- **Phase 4**: Thesis writing and documentation
+## Research Focus
 
-## Contributing
+This thesis explores:
 
-This is an academic thesis project. For questions or collaboration opportunities, please contact the author.
-
-## License
-
-This project is part of academic research. Please respect intellectual property rights and cite appropriately if using any components.
+1. **Automated Log Parsing**: Developing robust algorithms for extracting structured information from unstructured log data.
+2. **AI-Driven Anomaly Detection**: Implementing machine learning models to identify abnormal patterns in system logs.
+3. **Scalable Architecture**: Designing systems capable of handling large-scale enterprise log volumes.
 
 ## Contact
 
 - **Author**: Nguyen Hoang Quan
 - **Email**: qaun10052003@gmail.com
 
-
 ---
-
-*This README will be updated as the project progresses and components are implemented.*
+*This project is part of an academic thesis (2025).*

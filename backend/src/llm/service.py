@@ -290,10 +290,12 @@ NOTE: Session context could not be retrieved. Analyze based on this single log e
 Provide your analysis in JSON format (no markdown, just raw JSON):
 {
   "explanation": "3-4 sentences explaining why this session/log is anomalous. Describe what went wrong based on the log sequence.",
-  "root_causes": ["Primary cause", "Secondary cause", "Contributing factor"],
+  "root_causes": ["- Primary cause description", "- Secondary cause description", "- Contributing factor description"],
   "severity": "HIGH or MEDIUM or LOW",
-  "recommended_actions": ["Specific action 1", "Specific action 2", "Specific action 3"]
+  "recommended_actions": ["- Specific action 1", "- Specific action 2", "- Specific action 3"]
 }
+
+IMPORTANT: Each item in root_causes and recommended_actions MUST start with "- " (dash followed by space).
 
 SEVERITY GUIDELINES:
 - HIGH: Data loss risk, block corruption, replication failures, or service unavailability
