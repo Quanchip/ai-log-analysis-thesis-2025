@@ -70,3 +70,7 @@ frontend/node_modules/
 backend/src/third_party/logparser/data/loghub_2k/.DS_Store
 
 .claude/
+
+CLAUDE.md
+
+note/
