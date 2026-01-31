@@ -1,0 +1,142 @@
+AI LOG ANALYSIS SYSTEM - INSTALLATION & SETUP GUIDE
+===================================================
+
+PROJECT OVERVIEW
+----------------
+This system provides advanced log analysis using AI for automated parsing and anomaly detection.
+Tech Stack:
+- Frontend: React + TypeScript
+- Backend: FastAPI (Python)
+- Database: PostgreSQL
+- Storage: MinIO
+- Queue: Celery + Redis
+- Containerization: Docker
+
+PREREQUISITES
+-------------
+1. Docker and Docker Compose (Recommended for easiest setup)
+2. Git (to clone the repository)
+3. For Manual Installation only:
+   - Python 3.9+
+   - Node.js 16+ and npm/yarn
+   - PostgreSQL 13+
+   - Redis 6+
+   - MinIO Server
+
+===================================================
+METHOD 1: QUICK START WITH DOCKER (RECOMMENDED)
+===================================================
+This method sets up the entire stack (Frontend, Backend, DB, Redis, MinIO, Workers) automatically.
+
+1. Navigate to the docker utilities directory:
+   cd docker-utils/
+
+2. Start all services in detached mode:
+   docker-compose up -d
+
+3. Verify services are running:
+   docker-compose ps
+
+4. Access the services:
+   - Frontend:          http://localhost:3002
+   - Backend API:       http://localhost:8000
+   - API Docs:          http://localhost:8000/docs
+   - MinIO Console:     http://localhost:9001  (User: admin / Pass: admin123)
+   - PgAdmin:           http://localhost:8088  (User: admin@admin.com / Pass: admin)
+   - Flower (Monitor):  http://localhost:5555
+
+5. To stop all services:
+   docker-compose down
+
+   To stop and remove volumes (RESET DATA):
+   docker-compose down -v
+
+===================================================
+METHOD 2: MANUAL INSTALLATION (DEVELOPMENT)
+===================================================
+Use this method if you want to run services individually for development.
+
+STEP 1: DATABASE & INFRASTRUCTURE
+---------------------------------
+It is highly recommended to still use Docker for infrastructure dependencies (Postgres, Redis, MinIO) even if running code locally.
+
+1. Navigate to docker-utils:
+   cd docker-utils/
+
+2. Edit docker-compose.yml to comment out 'backend', 'frontend', and 'celery-worker' services if you only want infrastructure.
+   OR simply run everything and stop specific services you want to debug locally.
+
+STEP 2: BACKEND SETUP
+---------------------
+1. Navigate to backend directory:
+   cd backend/
+
+2. Create a virtual environment:
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+3. Install dependencies:
+   pip install -r requirements.txt
+
+4. Configure Environment:
+   Ensure your local .env file points to your local DB/Redis/MinIO instances.
+   (See CONFIGURATION section below)
+
+5. Run the Backend API:
+   uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+
+6. Run Celery Worker (in a separate terminal):
+   celery -A src.celery.celery worker --loglevel=info
+
+STEP 3: FRONTEND SETUP
+----------------------
+1. Navigate to frontend directory:
+   cd frontend/
+
+2. Install dependencies:
+   npm install
+
+3. Start development server:
+   npm run dev
+
+4. Access at http://localhost:3000 (Note: Vite default port is usually 5173 but check CLI output if different)
+
+===================================================
+CONFIGURATION
+===================================================
+The system uses environment variables for configuration.
+Default values are often sufficient for local development.
+
+Key Backend Variables (backend/.env):
+- DATABASE_URL=postgresql://postgres:password@localhost:5432/myproject
+- REDIS_URL=redis://localhost:6379/0
+- MINIO_ENDPOINT=localhost:9000
+- MINIO_ACCESS_KEY=admin
+- MINIO_SECRET_KEY=admin123
+
+===================================================
+TROUBLESHOOTING
+===================================================
+
+1. Port Conflicts:
+   - Ensure ports 3002, 8000, 5432, 6379, 9000, 9001 are free.
+   - If 'Bind for 0.0.0.0:8000 failed: port is already allocated', stop the process using that port.
+
+2. Database Connection Failures:
+   - Ensure Docker containers are running (`docker-compose ps`).
+   - Check if credentials in .env match docker-compose.yml.
+
+3. MinIO Connection Refused:
+   - Ensure MinIO is running.
+   - Verify ACCESS_KEY and SECRET_KEY match.
+
+4. "Upload Failed" or Permission Errors:
+   - Ensure the 'uploaded_file' directory exists in backend/ if running locally without MinIO.
+   - Check MinIO bucket permissions if using object storage.
+
+===================================================
+CONTACT
+===================================================
+Author: Nguyen Hoang Quan
+Email: qaun10052003@gmail.com
+Thesis Project 2025
