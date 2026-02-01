@@ -3,7 +3,7 @@
 An advanced log analysis system leveraging artificial intelligence techniques for automated log parsing, anomaly detection, and intelligent monitoring.
 
 > [!IMPORTANT]
-> **Attention Teachers & Reviewers**: Please refer to the **`Thesis Document/`** directory for the official thesis documentation, including the comprehensive **`INSTALLATION_GUIDE.txt`**.
+> **Attention Teachers & Reviewers**: Please refer to the **`Thesis Document/`** directory for the official thesis documentation, including the comprehensive **`INSTALLATION_GUIDE.txt`**, **`ITITIU21291_NguyễnHoàngQuân_report.pdf`**, and **`ITITIU21291_NguyễnHoàngQuân_demo.mov`**.
 
 ## Overview
 
