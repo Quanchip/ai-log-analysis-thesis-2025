@@ -2,6 +2,9 @@
 
 An advanced log analysis system leveraging artificial intelligence techniques for automated log parsing, anomaly detection, and intelligent monitoring.
 
+> [!IMPORTANT]
+> **Attention Teachers & Reviewers**: Please refer to the **`Thesis Document/`** directory for the official thesis documentation, including the comprehensive **`INSTALLATION_GUIDE.txt`**, **`ITITIU21291_NguyễnHoàngQuân_report.pdf`**, and **`ITITIU21291_NguyễnHoàngQuân_demo.mov`**.
+
 ## Overview
 
 This thesis project focuses on developing AI-powered solutions for log analysis, combining automated log parsing with intelligent anomaly detection. The system is designed to handle large-scale log data from various sources and provide actionable insights for system monitoring and troubleshooting.
