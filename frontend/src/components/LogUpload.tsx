@@ -313,7 +313,7 @@ const LogUpload = () => {
               border: '1px solid #dbeafe',
             }}>
               <p style={{ fontSize: '12px', color: '#1e40af', lineHeight: 1.5 }}>
-                <strong>Tip:</strong> Upload log files with clear timestamps (HDFS, Apache, Syslog formats work best)
+                <strong>Tip:</strong> Upload log files with clear timestamps (Only HDFS logs are supported for now)
               </p>
             </div>
           </div>
